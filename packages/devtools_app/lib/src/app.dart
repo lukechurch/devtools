@@ -29,6 +29,8 @@ import 'inspector/inspector_screen.dart';
 import 'landing_screen.dart';
 import 'logging/logging_controller.dart';
 import 'logging/logging_screen.dart';
+import 'idg/idg_controller.dart';
+import 'idg/idg_screen.dart';
 import 'memory/memory_controller.dart';
 import 'memory/memory_screen.dart';
 import 'network/network_controller.dart';
@@ -676,6 +678,10 @@ List<DevToolsScreen> get defaultScreens {
     DevToolsScreen<LoggingController>(
       const LoggingScreen(),
       createController: () => LoggingController(),
+    ),
+    DevToolsScreen<IDGController>(
+      const IDGScreen(),
+      createController: () => IDGController(),
     ),
     DevToolsScreen<void>(const ProviderScreen(), createController: () {}),
     DevToolsScreen<AppSizeController>(
