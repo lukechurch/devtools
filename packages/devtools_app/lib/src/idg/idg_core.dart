@@ -34,6 +34,7 @@ abstract class Sensor {
   String sensorName;
 
   void trigger(IDGEvent e);
+  String valueString();
 }
 
 class PresenceSensor extends Sensor {
@@ -46,6 +47,9 @@ class PresenceSensor extends Sensor {
   void trigger(IDGEvent e) {
     triggered = true;
   }
+
+  @override
+  String valueString() => "($triggered)";
 }
 
 class CountingSensor extends Sensor {
@@ -57,6 +61,9 @@ class CountingSensor extends Sensor {
   void trigger(IDGEvent e) {
     counter++;
   }
+
+  @override
+  String valueString() => "($counter)";
 }
 
 class IDGEvent {

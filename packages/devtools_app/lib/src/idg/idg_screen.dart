@@ -184,24 +184,34 @@ class _IDGScreenState extends State<IDGScreenBody>
   }
 
   Widget _buildIdgStep(idg_core.Step s) {
-    return Column(children: [
-      Row(children: [
-        Text(
-          s.title,
-          textAlign: TextAlign.left,
-          textScaleFactor: 2,
+    return Column(
+      children: [
+        Row(
+          children: [
+            Text(
+              s.title,
+              textAlign: TextAlign.left,
+              textScaleFactor: 2,
+            ),
+          ],
         ),
-      ]),
-      Row(children: [
-        Text(
-          s.text,
-          textAlign: TextAlign.justify,
+        Row(children: [
+          Text(
+            s.text,
+            textAlign: TextAlign.justify,
+          ),
+        ]),
+        Row(
+          children: [
+            Text(
+                "${s.nextStepGuard.sensorName} : ${s.nextStepGuard.valueString()}")
+          ],
         ),
-      ]),
-      Row(
-        children: [Text("")],
-      )
-    ]);
+        Row(
+          children: [Text("")],
+        )
+      ],
+    );
   }
 
   Widget _buildLoggingBody() {
