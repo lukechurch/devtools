@@ -1,4 +1,31 @@
-class Recipe {}
+class Recipe {
+  Recipe(this.steps);
+
+  List<Step> steps;
+
+  Set<Sensor> get allSensors {
+    final Set<Sensor> sensors = Set<Sensor>();
+    for (var step in steps) {
+      sensors.add(step.nextStepGuard);
+    }
+    return sensors;
+  }
+}
+
+class Action {
+  String name;
+
+  Action(this.name);
+}
+
+class Step {
+  Step(this.title, this.text, this.nextStepGuard, this.action);
+
+  String title;
+  String text;
+  Sensor nextStepGuard;
+  Action action;
+}
 
 abstract class Sensor {
   Sensor(this.presentationName, this.sensorName);
