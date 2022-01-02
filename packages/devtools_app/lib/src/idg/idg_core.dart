@@ -33,7 +33,7 @@ abstract class Sensor {
   String presentationName;
   String sensorName;
 
-  void trigger();
+  void trigger(IDGEvent e);
 }
 
 class PresenceSensor extends Sensor {
@@ -43,7 +43,7 @@ class PresenceSensor extends Sensor {
   bool triggered;
 
   @override
-  void trigger() {
+  void trigger(IDGEvent e) {
     triggered = true;
   }
 }
@@ -54,7 +54,32 @@ class CountingSensor extends Sensor {
 
   int counter;
   @override
-  void trigger() {
+  void trigger(IDGEvent e) {
     counter++;
+  }
+}
+
+class IDGEvent {
+  const IDGEvent(this.eventName, this.eventData);
+  final String eventName;
+  final String eventData;
+}
+
+class IDGEngine {
+  Set<Sensor> _senorsEventsToWatch;
+  Set<Recipe> _recipesToWatch;
+  // List<IDGEvent> events = [];
+
+  void addRecipes(Recipe r) {
+    _recipesToWatch.add(r);
+    _senorsEventsToWatch.addAll(r.allSensors);
+  }
+
+  void notifyOfEvent(IDGEvent event) {
+    for (Sensor sensor in _senorsEventsToWatch) {
+      if (sensor.sensorName == event.eventName) {
+        sensor.trigger(event);
+      }
+    }
   }
 }
