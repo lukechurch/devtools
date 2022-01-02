@@ -6,6 +6,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../analytics/analytics.dart' as ga;
@@ -201,15 +202,15 @@ class _IDGScreenState extends State<IDGScreenBody>
             textAlign: TextAlign.justify,
           ),
         ]),
+        Row(children: [Text("")]),
         Row(
           children: [
             Text(
-                "${s.nextStepGuard.sensorName} : ${s.nextStepGuard.valueString()}")
+                "${s.nextStepGuard.sensorName} : ${s.nextStepGuard.valueString()}",
+                style: TextStyle(fontFamily: 'courier'))
           ],
         ),
-        Row(
-          children: [Text("")],
-        )
+        Row(children: [Text("")])
       ],
     );
   }
