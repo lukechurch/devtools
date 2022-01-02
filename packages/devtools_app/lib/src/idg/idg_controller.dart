@@ -25,6 +25,8 @@ import '../ui/filter.dart';
 import '../ui/search.dart';
 import '../utils.dart';
 import '../vm_service_wrapper.dart';
+import 'idg_core.dart';
+import 'idg_recipes.dart';
 import 'idg_screen.dart';
 import 'idg_server.dart';
 
@@ -165,6 +167,9 @@ class IDGController extends DisposableController
         FilterControllerMixin<LogData>,
         AutoDisposeControllerMixin {
   IDGController() {
+    idgEngine = new IDGEngine();
+    idgEngine.addRecipes(minimalRecipe);
+
     autoDispose(
         serviceManager.onConnectionAvailable.listen(_handleConnectionStart));
     if (serviceManager.connectedAppInitialized) {
@@ -486,7 +491,12 @@ class IDGController extends DisposableController
 
   void _handleConnectionStop(dynamic event) {}
 
+  IDGEngine idgEngine;
   void log(LogData log) {
+    // Notify the IDG engine
+
+    idgEngine.notifyOfEvent(IDGEvent(log.kind, log.details));
+
     List<LogData> currentLogs = List.from(data);
 
     // Insert the new item and clamped the list to kMaxLogItemsLength.
