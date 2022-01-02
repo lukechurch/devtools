@@ -24,6 +24,7 @@ import '../ui/search.dart';
 import '../ui/service_extension_widgets.dart';
 import '../utils.dart';
 import 'idg_controller.dart';
+import 'idg_core.dart' as idg_core;
 
 final loggingSearchFieldKey = GlobalKey(debugLabel: 'LoggingSearchFieldKey');
 
@@ -46,8 +47,7 @@ class IDGScreen extends Screen {
 
   @override
   Widget buildStatus(BuildContext context, TextTheme textTheme) {
-    final IDGController controller =
-        Provider.of<IDGController>(context);
+    final IDGController controller = Provider.of<IDGController>(context);
 
     return StreamBuilder<String>(
       initialData: controller.statusText,
@@ -122,6 +122,7 @@ class _IDGScreenState extends State<IDGScreenBody>
   Widget build(BuildContext context) {
     return Column(children: [
       _buildLoggingControls(),
+      _buildIdgBody(controller.idgEngine.getRecipe()),
       const SizedBox(height: denseRowSpacing),
       Expanded(
         child: _buildLoggingBody(),
@@ -150,13 +151,57 @@ class _IDGScreenState extends State<IDGScreenBody>
         // ),
         const SizedBox(width: denseSpacing),
         _idgSelector(),
-        
+
         // FilterButton(
-          // onPressed: _showFilterDialog,
-          // isFilterActive: filteredLogs.length != controller.data.length,
+        // onPressed: _showFilterDialog,
+        // isFilterActive: filteredLogs.length != controller.data.length,
         // ),
       ],
     );
+  }
+
+  Widget _buildIdgBody(idg_core.Recipe r) {
+    List<Widget> widgets = [];
+
+    for (idg_core.Step s in r.steps) {
+      widgets.add(Row(children: [_buildIdgStep(s)]));
+    }
+
+    // return Column(children: [Row(children: widgets)]);
+
+    return Column(children: widgets);
+
+    // return Column(children: [
+    //   Row(children: [
+    //     Text('IDG Body 1'),
+    //     Text('IDG Body 2'),
+    //   ]),
+    //   Row(children: [
+    //     Text('IDG Body 1'),
+    //     Text('IDG Body 2'),
+    //   ]),
+    // ]);
+  }
+
+  Widget _buildIdgStep(idg_core.Step s) {
+    return Column(children: [
+      Row(children: [
+        Text(
+          s.title,
+          textAlign: TextAlign.left,
+          textScaleFactor: 2,
+        ),
+      ]),
+      Row(children: [
+        Text(
+          s.text,
+          textAlign: TextAlign.justify,
+        ),
+      ]),
+      Row(
+        children: [Text("")],
+      )
+    ]);
   }
 
   Widget _buildLoggingBody() {
@@ -180,16 +225,17 @@ class _IDGScreenState extends State<IDGScreenBody>
 
   var _runAnApp = "Run an App"; // TODO: Extract to the encoding of a list
   Widget _idgSelector() => DropdownButton<String>(
-  items: <String>[_runAnApp, 'Find a memory leak'].map((String value) {
-    return DropdownMenuItem<String>(
-      value: value,
-      child: Text(value),
-    );
-  },
-  ).toList(),
-  value: _runAnApp,
-  onChanged: (_) {}, // TODO: jump to IDG selector
-);
+        items: <String>[_runAnApp, 'Find a memory leak'].map(
+          (String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Text(value),
+            );
+          },
+        ).toList(),
+        value: _runAnApp,
+        onChanged: (_) {}, // TODO: jump to IDG selector
+      );
 
   // void _showFilterDialog() {
   //   showDialog(

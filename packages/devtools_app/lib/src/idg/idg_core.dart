@@ -66,8 +66,13 @@ class IDGEvent {
 }
 
 class IDGEngine {
-  Set<Sensor> _senorsEventsToWatch;
-  Set<Recipe> _recipesToWatch;
+  final Set<Sensor> _senorsEventsToWatch = <Sensor>{};
+  final Set<Recipe> _recipesToWatch = <Recipe>{};
+
+  Recipe getRecipe() {
+    assert(_recipesToWatch.length == 1);
+    return _recipesToWatch.first;
+  }
   // List<IDGEvent> events = [];
 
   void addRecipes(Recipe r) {
