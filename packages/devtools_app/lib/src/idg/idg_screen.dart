@@ -121,14 +121,26 @@ class _IDGScreenState extends State<IDGScreenBody>
 
   @override
   Widget build(BuildContext context) {
-    return Column(children: [
-      _buildLoggingControls(),
-      _buildIdgBody(controller.idgEngine.getRecipe()),
-      const SizedBox(height: denseRowSpacing),
-      Expanded(
-        child: _buildLoggingBody(),
-      ),
-    ]);
+    return Column(
+      children: [
+        _buildLoggingControls(),
+        Expanded(
+          child: Row(
+            children: [
+              Expanded(
+                child: _buildIdgBody(
+                  controller.idgEngine.getRecipe(),
+                ),
+              )
+            ],
+          ),
+        ),
+        const SizedBox(height: denseRowSpacing),
+        Expanded(
+          child: _buildLoggingBody(),
+        ),
+      ],
+    );
   }
 
   Widget _buildLoggingControls() {
@@ -165,12 +177,22 @@ class _IDGScreenState extends State<IDGScreenBody>
     List<Widget> widgets = [];
 
     for (idg_core.Step s in r.steps) {
-      widgets.add(Row(children: [_buildIdgStep(s)]));
+      widgets.add(
+        Row(
+          children: [
+            Expanded(child: _buildIdgStep(s)),
+          ],
+        ),
+      );
     }
 
     // return Column(children: [Row(children: widgets)]);
 
-    return Column(children: widgets);
+    return ListView(
+      padding: const EdgeInsets.all(8),
+      shrinkWrap: true,
+      children: widgets,
+    );
 
     // return Column(children: [
     //   Row(children: [
@@ -185,32 +207,86 @@ class _IDGScreenState extends State<IDGScreenBody>
   }
 
   Widget _buildIdgStep(idg_core.Step s) {
-    return Column(
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
+        Padding(
+          padding: EdgeInsets.only(top: 12),
+          child: Icon(
+            Icons.arrow_right,
+            color: s.isActive ? Colors.green : Colors.transparent,
+            size: 24,
+          ),
+        ),
+        Stack(
           children: [
-            Text(
-              s.title,
-              textAlign: TextAlign.left,
-              textScaleFactor: 2,
+            Checkbox(
+              value: s.isDone,
+              onChanged: (bool value) {
+                // TODO -- do more than just setting the step done value
+                s.isDone = value;
+                setState(() {});
+              },
             ),
           ],
         ),
-        Row(children: [
-          Text(
-            s.text,
-            textAlign: TextAlign.justify,
+        Expanded(
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Flexible(
+                    child: s.isTitleButton
+                        ? ElevatedButton(
+                            child: Text(s.title, textScaleFactor: 1.3),
+                            onPressed: () {
+                              // TODO
+                            },
+                          )
+                        : Padding(
+                            padding: EdgeInsets.fromLTRB(16, 13, 16, 13),
+                            child: Text(s.title, textScaleFactor: 1.3),
+                          ),
+                  ),
+                ],
+              ),
+              Row(children: [
+                Flexible(
+                  child: Text(
+                    s.text,
+                    softWrap: true,
+                    textAlign: TextAlign.justify,
+                  ),
+                ),
+              ]),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(
+                    '${s.nextStepGuard.sensorName} : ${s.nextStepGuard.valueString()}',
+                    style: const TextStyle(
+                      color: Colors.lightBlue,
+                      fontFamily: 'courier',
+                    ),
+                  )
+                ],
+              ),
+              Row(
+                children: s.buttons
+                    .map((e) => Padding(
+                        padding: EdgeInsets.only(right: 8),
+                        child: ElevatedButton(
+                          onPressed: () {
+                            // TODO
+                          },
+                          child: Text(e),
+                        )))
+                    .toList(),
+              ),
+              Row(children: [Text('')]),
+            ],
           ),
-        ]),
-        Row(children: [Text("")]),
-        Row(
-          children: [
-            Text(
-                "${s.nextStepGuard.sensorName} : ${s.nextStepGuard.valueString()}",
-                style: TextStyle(fontFamily: 'courier'))
-          ],
         ),
-        Row(children: [Text("")])
       ],
     );
   }

@@ -19,12 +19,20 @@ class Action {
 }
 
 class Step {
-  Step(this.title, this.text, this.nextStepGuard, this.action);
+  Step(this.title, this.text, this.nextStepGuard, this.action,
+      {this.isTitleButton = false,
+      this.buttons = const <String>[],
+      this.isDone = false,
+      this.isActive = false});
 
   String title;
+  bool isTitleButton;
   String text;
   Sensor nextStepGuard;
   Action action;
+  bool isDone;
+  bool isActive;
+  List<String> buttons;
 }
 
 abstract class Sensor {
