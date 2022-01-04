@@ -22,7 +22,6 @@ class Step {
   Step(this.title, this.text, this.nextStepGuard, this.action,
       {this.isTitleButton = false,
       this.buttons = const <String>[],
-      this.isDone = false,
       this.isActive = false});
 
   String title;
@@ -30,7 +29,7 @@ class Step {
   String text;
   Sensor nextStepGuard;
   Action action;
-  bool isDone;
+  bool get isDone => nextStepGuard.isDone;
   bool isActive;
   List<String> buttons;
 }
@@ -43,6 +42,7 @@ abstract class Sensor {
 
   void trigger(IDGEvent e);
   String valueString();
+  bool get isDone;
 }
 
 class PresenceSensor extends Sensor {
@@ -58,6 +58,9 @@ class PresenceSensor extends Sensor {
 
   @override
   String valueString() => "($triggered)";
+
+  @override
+  bool get isDone => triggered;
 }
 
 class CountingSensor extends Sensor {
@@ -72,6 +75,9 @@ class CountingSensor extends Sensor {
 
   @override
   String valueString() => "($counter)";
+
+  @override
+  bool get isDone => counter > 0;
 }
 
 class IDGEvent {

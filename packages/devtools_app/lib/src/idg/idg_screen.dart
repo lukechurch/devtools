@@ -224,7 +224,7 @@ class _IDGScreenState extends State<IDGScreenBody>
               value: s.isDone,
               onChanged: (bool value) {
                 // TODO -- do more than just setting the step done value
-                s.isDone = value;
+                // s.isDone = value;
                 setState(() {});
               },
             ),
