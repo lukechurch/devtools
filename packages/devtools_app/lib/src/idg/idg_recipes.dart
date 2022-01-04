@@ -24,15 +24,15 @@ final minimalRecipe = idg_core.Recipe(<idg_core.Step>[
       isTitleButton: false,
       buttons: ["Button", "Another button"]),
   idg_core.Step(
-      "Trigger a garbage collection",
-      """
+    "Trigger a garbage collection",
+    """
       One source of performance problems can be excessive garbage collection.
       Press the button on the app repeatedly until a garbage collection has
       been observed
       """,
-      idg_core.PresenceSensor("gc", "garbage collection seen"),
-      idg_core.Action("action name"),
-      isActive: false,
-      isTitleButton: false,
-      buttons: ["Button", "Another button"]),
+    idg_core.PresenceSensor("gc", "garbage collection seen"),
+    idg_core.Action("action name"),
+    isActive: false,
+    isTitleButton: false,
+  ),
 ]);

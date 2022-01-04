@@ -147,7 +147,10 @@ class _IDGScreenState extends State<IDGScreenBody>
     final hasData = controller.filteredData.value.isNotEmpty;
     return Row(
       children: [
-        ClearButton(onPressed: controller.clear),
+        ClearButton(onPressed: () {
+          controller.clear();
+          controller.idgEngine.reset();
+        }),
         // const Spacer(),
         // const SizedBox(width: denseSpacing),
         // // TODO(kenz): fix focus issue when state is refreshed
@@ -321,9 +324,10 @@ class _IDGScreenState extends State<IDGScreenBody>
           },
         ).toList(),
         value: _runAnApp,
-        onChanged: (_) {}, // TODO: jump to IDG selector
+        onChanged: (_) {
+          controller.idgEngine.reset();
+        }, // TODO: jump to IDG selector
       );
-
   // void _showFilterDialog() {
   //   showDialog(
   //     context: context,
