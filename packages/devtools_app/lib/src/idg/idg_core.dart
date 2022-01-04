@@ -36,7 +36,7 @@ class Step {
 }
 
 abstract class Sensor {
-  Sensor(this.presentationName, this.sensorName);
+  Sensor(this.sensorName, this.presentationName);
 
   String presentationName;
   String sensorName;
@@ -46,10 +46,10 @@ abstract class Sensor {
 }
 
 class PresenceSensor extends Sensor {
-  PresenceSensor(String presentationName, String sensorName)
-      : super(presentationName, sensorName);
+  PresenceSensor(sensorName, presentationName)
+      : super(sensorName, presentationName);
 
-  bool triggered;
+  bool triggered = false;
 
   @override
   void trigger(IDGEvent e) {
@@ -64,7 +64,7 @@ class CountingSensor extends Sensor {
   CountingSensor(String presentationName, String sensorName, {this.counter = 0})
       : super(presentationName, sensorName);
 
-  int counter;
+  int counter = 0;
   @override
   void trigger(IDGEvent e) {
     counter++;
@@ -97,7 +97,11 @@ class IDGEngine {
 
   void notifyOfEvent(IDGEvent event) {
     for (Sensor sensor in _senorsEventsToWatch) {
+      // DEBUG for matching diagnostics
+      // print(
+      //     "Sensor Name for test: ${event.eventName} == ${sensor.sensorName}, match: ${sensor.sensorName == event.eventName}");
       if (sensor.sensorName == event.eventName) {
+        print("IDG: Triggering sensor: ${sensor.sensorName}");
         sensor.trigger(event);
       }
     }

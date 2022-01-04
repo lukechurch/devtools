@@ -8,10 +8,15 @@ final minimalRecipe = idg_core.Recipe(<idg_core.Step>[
       idg_core.Action("action name"),
       isDone: true),
   idg_core.Step(
-      "Second step",
-      """What is Lorem Ipsum?
-      Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the  1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.
-      
+      "Run the app",
+      "Start the application",
+      idg_core.PresenceSensor("MyApp.Build", "App started"),
+      idg_core.Action("action name"),
+      isDone: true),
+  idg_core.Step(
+      "Press the buttong",
+      """
+      Some long rambling text to make sure the window scrolls
       It is a long established fact that a reader will be distracted by the 
       readable content of a page when looking at its layout. The point of 
       using Lorem Ipsum is that it has a more-or-less normal distribution of 
@@ -21,8 +26,11 @@ final minimalRecipe = idg_core.Recipe(<idg_core.Step>[
       search for 'lorem ipsum' will uncover many web sites still in their 
       infancy. Various versions have evolved over the years, sometimes by 
       accident, sometimes on purpose (injected humour and the like).
+
+      Press the button on the app
       """,
-      idg_core.PresenceSensor("sesnor name 2", "sensor description 2"),
+      idg_core.CountingSensor(
+          "_myhomepagestate.setstate", "Press event count"),
       idg_core.Action("action name"),
       isActive: true,
       isTitleButton: true,
