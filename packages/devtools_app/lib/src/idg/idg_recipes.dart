@@ -7,7 +7,6 @@ var s0 = idg_core.Step(
       Restart the application, you can do this by pressing 'R' in the 
       application or clicking the button """,
     idg_core.PresenceSensor("APP_START".toLowerCase(), "App started"),
-    isActive: true,
     buttons: [
       idg_core.Action("hot_restart", () async {
         print("hot restart clicked");
@@ -29,7 +28,6 @@ var s1 = idg_core.Step(
         () => s0.isDone,
         idg_core.CountingSensor(
             "_myhomepagestate.setstate", "Press event count")),
-    isActive: false,
     isTitleButton: false,
     buttons: []);
 
@@ -42,7 +40,6 @@ var s2 = idg_core.Step(
       """,
     idg_core.MaskUntil(() => s1.isDone,
         idg_core.PresenceSensor("gc", "garbage collection seen")),
-    isActive: false,
     isTitleButton: false,
     buttons: []);
 
@@ -57,7 +54,6 @@ var s3 = idg_core.Step(
         idg_core.PresenceSensor(
             "_MyHomePageState.setState - slowpath".toLowerCase(),
             "Slow path executed")),
-    isActive: false,
     isTitleButton: false,
     buttons: []);
 
@@ -73,7 +69,6 @@ var s4 = idg_core.Step(
             "File path changed",
             // TODO: Generalise
             "/Users/lukechurch/GitRepos/LCC/idg_sample_apps/image_list/lib/main.dart")),
-    isActive: false,
     isTitleButton: false,
     buttons: []);
 
@@ -84,7 +79,6 @@ var s5 = idg_core.Step(
       application or clicking the button """,
     idg_core.MaskUntil(
         () => s4.isDone, idg_core.PresenceSensor("myapp.build", "App started")),
-    isActive: true,
     buttons: [
       idg_core.Action("hot_reload", () async {
         print("hot reload clicked");
@@ -102,7 +96,6 @@ var s6 = idg_core.Step(
         () => s5.isDone,
         idg_core.PerfSensor("_MyHomePageState.setState.timer".toLowerCase(),
             "Slow path fixed", 500)),
-    isActive: false,
     isTitleButton: false,
     buttons: []);
 

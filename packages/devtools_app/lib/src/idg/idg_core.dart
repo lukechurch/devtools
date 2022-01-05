@@ -31,7 +31,7 @@ class Step {
   Step(this.title, this.text, this.nextStepGuard,
       {this.isTitleButton = false,
       this.buttons = const <Action>[],
-      this.isActive = false});
+      });
 
   String title;
   bool isTitleButton;
@@ -39,7 +39,7 @@ class Step {
   Sensor nextStepGuard;
   // Action action;
   bool get isDone => nextStepGuard.isDone;
-  bool isActive;
+  bool isActive = false;
   List<Action> buttons;
 
   void reset() => nextStepGuard.reset();
@@ -244,11 +244,25 @@ class IDGEngine {
       if (sensor.sensorName == event.eventName) {
         print("IDG: Triggering sensor: ${sensor.sensorName}");
         sensor.trigger(event);
-        return;
+        _updateActiveSteps();
       }
     }
     // DEBUG
     print("IDG: No sensor found for : ${event.eventName} : ${event.eventData}");
+  }
+
+  void _updateActiveSteps() {
+    for (var r in _recipesToWatch) {
+      bool seenInactiveStep = false;
+      for (var step in r.steps) {
+        if (!step.isDone && !seenInactiveStep) {
+          seenInactiveStep = true;
+          step.isActive = true;
+        } else {
+          step.isActive = false;
+        }
+      }
+    }
   }
 
   void reset() {
