@@ -141,6 +141,52 @@ class FileChangeSensor extends Sensor {
   }
 }
 
+class CondAnd extends Sensor {
+  Sensor sensor;
+  bool Function() cond;
+
+  CondAnd(bool Function() this.cond, this.sensor)
+      : super(sensor.sensorName, sensor.presentationName);
+
+  @override
+  String valueString() => sensor.valueString();
+
+  @override
+  bool get isDone => cond() && sensor.isDone;
+
+  @override
+  void trigger(IDGEvent e) => sensor.trigger(e);
+
+  @override
+  void reset() {
+    sensor.reset();
+  }
+}
+
+class MaskUntil extends Sensor {
+  Sensor sensor;
+  bool Function() cond;
+
+  MaskUntil(bool Function() this.cond, this.sensor)
+      : super(sensor.sensorName, sensor.presentationName);
+
+  @override
+  String valueString() => sensor.valueString();
+
+  @override
+  bool get isDone => cond() && sensor.isDone;
+
+  @override
+  void trigger(IDGEvent e) {
+    if (cond()) sensor.trigger(e);
+  }
+
+  @override
+  void reset() {
+    sensor.reset();
+  }
+}
+
 class CountingSensor extends Sensor {
   CountingSensor(String presentationName, String sensorName, {this.counter = 0})
       : super(presentationName, sensorName) {
