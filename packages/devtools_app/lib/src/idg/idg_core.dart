@@ -66,17 +66,21 @@ class PerfSensor extends Sensor {
   }
 
   bool triggered;
+  int elapsedMilliseconds;
 
   @override
   void trigger(IDGEvent e) {
     print(e.eventData);
     int elapsedMs =
         json.decode(e.eventData)["extensionData"]["elapsedMilliseconds"];
+
     triggered = elapsedMs < elapsedMsThreshold;
+    if (triggered) this.elapsedMilliseconds = elapsedMs;
   }
 
   @override
-  String valueString() => '($triggered)';
+  String valueString() =>
+      triggered ? '($triggered: $elapsedMilliseconds ms)' : '(false)';
 
   @override
   bool get isDone => triggered;
