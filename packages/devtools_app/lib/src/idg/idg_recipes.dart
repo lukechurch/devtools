@@ -1,5 +1,6 @@
 import '../globals.dart';
 import 'idg_core.dart' as idg_core;
+import 'package:http/http.dart' as http;
 
 var s0 = idg_core.Step(
     "Hot restart the application",
@@ -70,7 +71,15 @@ var s4 = idg_core.Step(
             // TODO: Generalise
             "/Users/lukechurch/GitRepos/LCC/idg_sample_apps/image_list/lib/main.dart")),
     isTitleButton: false,
-    buttons: []);
+    buttons: [
+      idg_core.Action("open file in vscode", () async {
+        print("open file");
+        await http.get(Uri.parse(
+            'http://localhost:9991/?open=/Users/lukechurch/GitRepos/LCC/idg_sample_apps/image_list/lib/main.dart'));
+
+        // await serviceManager.performHotRestart();
+      })
+    ]);
 
 var s5 = idg_core.Step(
     "Hot reload the application",
