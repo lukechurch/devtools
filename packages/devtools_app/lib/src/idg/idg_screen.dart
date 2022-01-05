@@ -279,10 +279,10 @@ class _IDGScreenState extends State<IDGScreenBody>
                     .map((e) => Padding(
                         padding: EdgeInsets.only(right: 8),
                         child: ElevatedButton(
-                          onPressed: () {
-                            // TODO
+                          onPressed: () async {
+                            await e.onClick();
                           },
-                          child: Text(e),
+                          child: Text(e.name),
                         )))
                     .toList(),
               ),

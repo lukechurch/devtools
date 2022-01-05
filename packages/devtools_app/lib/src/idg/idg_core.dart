@@ -1,3 +1,5 @@
+import 'package:vm_service/vm_service.dart';
+
 class Recipe {
   Recipe(this.steps);
 
@@ -18,24 +20,25 @@ class Recipe {
 
 class Action {
   String name;
+  Future Function() onClick;
 
-  Action(this.name);
+  Action(this.name, this.onClick);
 }
 
 class Step {
-  Step(this.title, this.text, this.nextStepGuard, this.action,
+  Step(this.title, this.text, this.nextStepGuard,
       {this.isTitleButton = false,
-      this.buttons = const <String>[],
+      this.buttons = const <Action>[],
       this.isActive = false});
 
   String title;
   bool isTitleButton;
   String text;
   Sensor nextStepGuard;
-  Action action;
+  // Action action;
   bool get isDone => nextStepGuard.isDone;
   bool isActive;
-  List<String> buttons;
+  List<Action> buttons;
 
   void reset() => nextStepGuard.reset();
 }
