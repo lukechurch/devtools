@@ -7,7 +7,7 @@ final minimalRecipe = idg_core.Recipe(<idg_core.Step>[
       """
       Restart the application, you can do this by pressing 'R' in the 
       application or clicking the button """,
-      idg_core.PresenceSensor("myapp.build", "App started"),
+      idg_core.PresenceSensor("APP_START", "App started"),
       isActive: true,
       buttons: [
         idg_core.Action("hot_restart", () async {
@@ -57,7 +57,10 @@ final minimalRecipe = idg_core.Recipe(<idg_core.Step>[
       """
       Remove the spin wait from the core execution path
       """,
-      idg_core.FileChangeSensor("vscode".toLowerCase(), "File path changed",
+      idg_core.FileChangeSensor(
+          "vscode".toLowerCase(),
+          "File path changed",
+          // TODO: Generalise
           "/Users/lukechurch/GitRepos/LCC/idg_sample_apps/image_list/lib/main.dart"),
       isActive: false,
       isTitleButton: false,
