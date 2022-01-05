@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:vm_service/vm_service.dart';
 
 class Recipe {
@@ -56,6 +58,35 @@ abstract class Sensor {
   void reset();
 }
 
+class PerfSensor extends Sensor {
+  int elapsedMsThreshold;
+  PerfSensor(sensorName, presentationName, this.elapsedMsThreshold)
+      : super(sensorName, presentationName) {
+    reset();
+  }
+
+  bool triggered;
+
+  @override
+  void trigger(IDGEvent e) {
+    print(e.eventData);
+    int elapsedMs =
+        json.decode(e.eventData)["extensionData"]["elapsedMilliseconds"];
+    triggered = elapsedMs < elapsedMsThreshold;
+  }
+
+  @override
+  String valueString() => '($triggered)';
+
+  @override
+  bool get isDone => triggered;
+
+  @override
+  void reset() {
+    triggered = false;
+  }
+}
+
 class PresenceSensor extends Sensor {
   PresenceSensor(sensorName, presentationName)
       : super(sensorName, presentationName) {
@@ -67,6 +98,35 @@ class PresenceSensor extends Sensor {
   @override
   void trigger(IDGEvent e) {
     triggered = true;
+  }
+
+  @override
+  String valueString() => '($triggered)';
+
+  @override
+  bool get isDone => triggered;
+
+  @override
+  void reset() {
+    triggered = false;
+  }
+}
+
+class FileChangeSensor extends Sensor {
+  String filePath;
+
+  FileChangeSensor(sensorName, presentationName, this.filePath)
+      : super(sensorName, presentationName) {
+    reset();
+  }
+
+  bool triggered;
+
+  @override
+  void trigger(IDGEvent e) {
+    // idg?arg=IDG report: [4:44:28 AM] onDidChangeTextDocument /Users/lukechurch/GitRepos/LCC/idg_sample_apps/image_list/lib/main.dart
+    if (e.eventData.contains("onDidChangeTextDocument") &&
+        e.eventData.contains(filePath)) triggered = true;
   }
 
   @override
@@ -134,8 +194,11 @@ class IDGEngine {
       if (sensor.sensorName == event.eventName) {
         print("IDG: Triggering sensor: ${sensor.sensorName}");
         sensor.trigger(event);
+        return;
       }
     }
+    // DEBUG
+    print("IDG: No sensor found for : ${event.eventName} : ${event.eventData}");
   }
 
   void reset() {

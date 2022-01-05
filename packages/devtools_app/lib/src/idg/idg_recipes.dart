@@ -40,4 +40,50 @@ final minimalRecipe = idg_core.Recipe(<idg_core.Step>[
       isActive: false,
       isTitleButton: false,
       buttons: []),
+  idg_core.Step(
+      "Trigger a slow path execution",
+      """
+      Demonstrate that the application has a performance problem by running
+      slow path code - press the 'Sloowww' button
+      """,
+      idg_core.PresenceSensor(
+          "_MyHomePageState.setState - slowpath".toLowerCase(),
+          "Slow path executed"),
+      isActive: false,
+      isTitleButton: false,
+      buttons: []),
+  idg_core.Step(
+      "Change the main.dart file to remove the bug",
+      """
+      Remove the spin wait from the core execution path
+      """,
+      idg_core.FileChangeSensor("vscode".toLowerCase(), "File path changed",
+          "/Users/lukechurch/GitRepos/LCC/idg_sample_apps/image_list/lib/main.dart"),
+      isActive: false,
+      isTitleButton: false,
+      buttons: []),
+  idg_core.Step(
+      "Hot reload the application",
+      """
+      hot reload the application, you can do this by pressing 'R' in the 
+      application or clicking the button """,
+      idg_core.PresenceSensor("myapp.build", "App started"),
+      isActive: true,
+      buttons: [
+        idg_core.Action("hot_reload", () async {
+          print("hot reload clicked");
+          // minimalRecipe.reset();
+          await serviceManager.performHotReload();
+        })
+      ]),
+  idg_core.Step(
+      "Trigger a slow path execution again after fixing the probem",
+      """
+      Rerun the slow-path to demonstrate that the problem has been solved
+      """,
+      idg_core.PerfSensor("_MyHomePageState.setState.timer".toLowerCase(),
+          "Slow path fixed", 500),
+      isActive: false,
+      isTitleButton: false,
+      buttons: []),
 ]);

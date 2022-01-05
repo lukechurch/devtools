@@ -266,7 +266,7 @@ class _IDGScreenState extends State<IDGScreenBody>
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   Text(
-                    '${s.nextStepGuard.sensorName} : ${s.nextStepGuard.valueString()}',
+                    '${s.nextStepGuard.presentationName} : ${s.nextStepGuard.valueString()}',
                     style: const TextStyle(
                       color: Colors.lightBlue,
                       fontFamily: 'courier',
