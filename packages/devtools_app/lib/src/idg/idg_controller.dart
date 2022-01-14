@@ -250,7 +250,6 @@ class IDGController extends DisposableController
   void clear() {
     resetFilter();
     _updateData([]);
-    serviceManager.errorBadgeManager.clearErrors(IDGScreen.id);
   }
 
   CommPortListener listener;
@@ -516,6 +515,16 @@ class IDGController extends DisposableController
     }
 
     _updateData(currentLogs);
+  }
+
+  Stream get onEngineUpdated => idgEngine.updatesController.stream;
+
+  ValueListenable<bool> get idgVisible => _idgVisible;
+
+  final _idgVisible = ValueNotifier<bool>(false);
+
+  void toggleIDGVisible(bool visible) {
+    _idgVisible.value = visible;
   }
 
   static RemoteDiagnosticsNode _findFirstSummary(RemoteDiagnosticsNode node) {

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:vm_service/vm_service.dart';
@@ -28,10 +29,13 @@ class Action {
 }
 
 class Step {
-  Step(this.title, this.text, this.nextStepGuard,
-      {this.isTitleButton = false,
-      this.buttons = const <Action>[],
-      });
+  Step(
+    this.title,
+    this.text,
+    this.nextStepGuard, {
+    this.isTitleButton = false,
+    this.buttons = const <Action>[],
+  });
 
   String title;
   bool isTitleButton;
@@ -225,6 +229,8 @@ class IDGEngine {
   final Set<Sensor> _senorsEventsToWatch = <Sensor>{};
   final Set<Recipe> _recipesToWatch = <Recipe>{};
 
+  final StreamController<bool> updatesController = StreamController.broadcast();
+
   Recipe getRecipe() {
     assert(_recipesToWatch.length == 1);
     return _recipesToWatch.first;
@@ -263,6 +269,7 @@ class IDGEngine {
         }
       }
     }
+    updatesController.add(true);
   }
 
   void reset() {

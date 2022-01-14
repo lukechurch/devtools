@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:devtools_app/devtools_app.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:pedantic/pedantic.dart';
@@ -103,6 +104,8 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
   bool get denseModeEnabled => _denseModeEnabled;
   bool _denseModeEnabled;
 
+  IDGController idgController;
+
   @override
   void initState() {
     super.initState();
@@ -135,6 +138,8 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
         _denseModeEnabled = preferences.denseModeEnabled.value;
       });
     });
+
+    idgController = IDGController();
   }
 
   @override
@@ -238,6 +243,7 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
                   if (serviceManager.connectedApp.isFlutterAppNow) ...[
                     HotReloadButton(),
                     HotRestartButton(),
+                    OpenIDGAction(idgController: idgController),
                   ],
                   OpenSettingsAction(),
                   ReportFeedbackButton(),
@@ -317,7 +323,12 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
       ),
       builder: (context, child) => Provider<AnalyticsController>.value(
         value: widget.analyticsController,
-        child: Notifications(child: child),
+        child: Notifications(
+          child: IDGScreen(
+            idgController: idgController,
+            child: child,
+          ),
+        ),
       ),
       routerDelegate: DevToolsRouterDelegate(_getPage),
       routeInformationParser: DevToolsRouteInformationParser(),
@@ -457,6 +468,32 @@ class OpenSettingsAction extends StatelessWidget {
           alignment: Alignment.center,
           child: Icon(
             Icons.settings,
+            size: actionsIconSize,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class OpenIDGAction extends StatelessWidget {
+  OpenIDGAction({Key key, this.idgController}) : super(key: key);
+  IDGController idgController;
+
+  @override
+  Widget build(BuildContext context) {
+    return DevToolsTooltip(
+      message: 'IDG',
+      child: InkWell(
+        onTap: () async {
+          idgController.toggleIDGVisible(true);
+        },
+        child: Container(
+          width: DevToolsScaffold.actionWidgetSize,
+          height: DevToolsScaffold.actionWidgetSize,
+          alignment: Alignment.center,
+          child: Icon(
+            Octicons.clippy,
             size: actionsIconSize,
           ),
         ),
@@ -678,10 +715,6 @@ List<DevToolsScreen> get defaultScreens {
     DevToolsScreen<LoggingController>(
       const LoggingScreen(),
       createController: () => LoggingController(),
-    ),
-    DevToolsScreen<IDGController>(
-      const IDGScreen(),
-      createController: () => IDGController(),
     ),
     DevToolsScreen<void>(const ProviderScreen(), createController: () {}),
     DevToolsScreen<AppSizeController>(

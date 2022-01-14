@@ -29,155 +29,157 @@ import 'idg_core.dart' as idg_core;
 
 final loggingSearchFieldKey = GlobalKey(debugLabel: 'LoggingSearchFieldKey');
 
-/// Presents logs from the connected app.
-class IDGScreen extends Screen {
-  const IDGScreen()
-      : super(
-          id,
-          title: 'IDG',
-          icon: Octicons.clippy,
-        );
+class IDGScreen extends StatefulWidget {
+  const IDGScreen({
+    Key key,
+    @required this.idgController,
+    @required this.child,
+  }) : super(key: key);
 
-  static const id = 'idg';
+  final IDGController idgController;
 
-  @override
-  String get docPageId => screenId;
-
-  @override
-  Widget build(BuildContext context) => const IDGScreenBody();
-
-  @override
-  Widget buildStatus(BuildContext context, TextTheme textTheme) {
-    final IDGController controller = Provider.of<IDGController>(context);
-
-    return StreamBuilder<String>(
-      initialData: controller.statusText,
-      stream: controller.onLogStatusChanged,
-      builder: (BuildContext context, AsyncSnapshot<String> snapshot) {
-        return Text(snapshot.data ?? '');
-      },
-    );
-  }
-}
-
-class IDGScreenBody extends StatefulWidget {
-  const IDGScreenBody();
-
-  static const filterQueryInstructions = '''
-Type a filter query to show or hide specific logs.
-
-Any text that is not paired with an available filter key below will be queried against all categories (kind, message).
-
-Available filters:
-    'kind', 'k'       (e.g. 'k:flutter.frame', '-k:gc,stdout')
-
-Example queries:
-    'my log message k:stdout,stdin'
-    'flutter -k:gc'
-''';
+  final Widget child;
 
   @override
   _IDGScreenState createState() => _IDGScreenState();
 }
 
-class _IDGScreenState extends State<IDGScreenBody>
-    with AutoDisposeMixin, SearchFieldMixin<IDGScreenBody> {
-  LogData selected;
+class _IDGScreenState extends State<IDGScreen>
+    with AutoDisposeMixin, SingleTickerProviderStateMixin {
+  static const viewerWidth = 600.0;
 
-  IDGController controller;
+  /// Animation controller for animating the opening and closing of the viewer.
+  AnimationController visibilityController;
 
-  List<LogData> filteredLogs;
+  /// A curved animation that matches [visibilityController].
+  Animation<double> visibilityAnimation;
+
+  bool isVisible;
 
   @override
   void initState() {
     super.initState();
-    ga.screen(IDGScreen.id);
-  }
+    isVisible = widget.idgController.idgVisible.value;
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
+    visibilityController = longAnimationController(this);
+    // Add [densePadding] to the end to account for the space between the
+    // release notes viewer and the right edge of DevTools.
+    visibilityAnimation =
+        Tween<double>(begin: 0, end: viewerWidth + densePadding)
+            .animate(visibilityController);
 
-    final newController = Provider.of<IDGController>(context);
-    if (newController == controller) return;
-    controller = newController;
-
-    cancel();
-
-    filteredLogs = controller.filteredData.value;
-    addAutoDisposeListener(controller.filteredData, () {
+    addAutoDisposeListener(widget.idgController.idgVisible, () {
       setState(() {
-        filteredLogs = controller.filteredData.value;
-      });
-    });
-
-    selected = controller.selectedLog.value;
-    addAutoDisposeListener(controller.selectedLog, () {
-      setState(() {
-        selected = controller.selectedLog.value;
+        isVisible = widget.idgController.idgVisible.value;
+        if (isVisible) {
+          visibilityController.forward();
+        } else {
+          visibilityController.reverse();
+        }
       });
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _buildLoggingControls(),
-        Expanded(
-          child: Row(
-            children: [
-              Expanded(
-                child: _buildIdgBody(
-                  controller.idgEngine.getRecipe(),
-                ),
-              )
-            ],
+    return Material(
+      child: Stack(
+        children: [
+          widget.child,
+          IDGBody(
+            idgController: widget.idgController,
+            visibilityAnimation: visibilityAnimation,
           ),
-        ),
-        const SizedBox(height: denseRowSpacing),
-        Expanded(
-          child: _buildLoggingBody(),
-        ),
-      ],
+        ],
+      ),
     );
   }
+}
 
-  Widget _buildLoggingControls() {
-    final hasData = controller.filteredData.value.isNotEmpty;
-    return Row(
-      children: [
-        ClearButton(onPressed: () {
-          controller.clear();
-          controller.idgEngine.reset();
-        }),
-        // const Spacer(),
-        // const SizedBox(width: denseSpacing),
-        // // TODO(kenz): fix focus issue when state is refreshed
-        // Container(
-        //   width: wideSearchTextWidth,
-        //   height: defaultTextFieldHeight,
-        //   child: buildSearchField(
-        //     controller: controller,
-        //     searchFieldKey: loggingSearchFieldKey,
-        //     searchFieldEnabled: hasData,
-        //     shouldRequestFocus: false,
-        //     supportsNavigation: true,
-        //   ),
-        // ),
-        const SizedBox(width: denseSpacing),
-        _idgSelector(),
+class IDGBody extends AnimatedWidget {
+  const IDGBody({
+    Key key,
+    @required this.idgController,
+    @required Animation<double> visibilityAnimation,
+  }) : super(key: key, listenable: visibilityAnimation);
 
-        // FilterButton(
-        // onPressed: _showFilterDialog,
-        // isFilterActive: filteredLogs.length != controller.data.length,
-        // ),
-      ],
+  final IDGController idgController;
+
+  @override
+  Widget build(BuildContext context) {
+    final animation = listenable as Animation<double>;
+    final theme = Theme.of(context);
+    return Positioned(
+      top: densePadding,
+      bottom: densePadding,
+      right: densePadding - (_IDGScreenState.viewerWidth - animation.value),
+      width: _IDGScreenState.viewerWidth,
+      child: Card(
+        elevation: defaultElevation,
+        color: theme.scaffoldBackgroundColor,
+        clipBehavior: Clip.hardEdge,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(defaultBorderRadius),
+          side: BorderSide(
+            color: theme.focusColor,
+          ),
+        ),
+        child: Column(
+          children: [
+            AreaPaneHeader(
+              title: const Text('IDG'),
+              needsTopBorder: false,
+              rightActions: [
+                IconButton(
+                  padding: const EdgeInsets.all(0.0),
+                  onPressed: () => idgController.toggleIDGVisible(false),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            IDGScreenBody(idgController: idgController),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class IDGScreenBody extends StatefulWidget {
+  const IDGScreenBody({
+    Key key,
+    @required this.idgController,
+  }) : super(key: key);
+
+  final IDGController idgController;
+
+  @override
+  _IDGScreenBodyState createState() =>
+      _IDGScreenBodyState(idgController: idgController);
+}
+
+class _IDGScreenBodyState extends State<IDGScreenBody>
+    with AutoDisposeMixin, SearchFieldMixin<IDGScreenBody> {
+  _IDGScreenBodyState({@required this.idgController}) : super();
+
+  final IDGController idgController;
+
+  LogData selected;
+
+  List<LogData> filteredLogs;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<bool>(
+      stream: idgController.onEngineUpdated,
+      builder: (context, snapshot) => Expanded(
+        child: _buildIdgBody(idgController.idgEngine.getRecipe()),
+      ),
     );
   }
 
   Widget _buildIdgBody(idg_core.Recipe r) {
-    List<Widget> widgets = [];
+    List<Widget> widgets = [_idgSelector()];
 
     for (idg_core.Step s in r.steps) {
       widgets.add(
@@ -189,24 +191,11 @@ class _IDGScreenState extends State<IDGScreenBody>
       );
     }
 
-    // return Column(children: [Row(children: widgets)]);
-
     return ListView(
       padding: const EdgeInsets.all(8),
       shrinkWrap: true,
       children: widgets,
     );
-
-    // return Column(children: [
-    //   Row(children: [
-    //     Text('IDG Body 1'),
-    //     Text('IDG Body 2'),
-    //   ]),
-    //   Row(children: [
-    //     Text('IDG Body 1'),
-    //     Text('IDG Body 2'),
-    //   ]),
-    // ]);
   }
 
   Widget _buildIdgStep(idg_core.Step s) {
@@ -294,25 +283,6 @@ class _IDGScreenState extends State<IDGScreenBody>
     );
   }
 
-  Widget _buildLoggingBody() {
-    return Split(
-      axis: Axis.vertical,
-      initialFractions: const [0.72, 0.28],
-      children: [
-        OutlineDecoration(
-          child: LogsTable(
-            data: filteredLogs,
-            onItemSelected: controller.selectLog,
-            selectionNotifier: controller.selectedLog,
-            searchMatchesNotifier: controller.searchMatches,
-            activeSearchMatchNotifier: controller.activeSearchMatch,
-          ),
-        ),
-        LogDetails(log: selected),
-      ],
-    );
-  }
-
   var _runAnApp = "Run an App"; // TODO: Extract to the encoding of a list
   Widget _idgSelector() => DropdownButton<String>(
         items: <String>[_runAnApp, 'Find a memory leak'].map(
@@ -325,7 +295,7 @@ class _IDGScreenState extends State<IDGScreenBody>
         ).toList(),
         value: _runAnApp,
         onChanged: (_) {
-          controller.idgEngine.reset();
+          idgController.idgEngine.reset();
         }, // TODO: jump to IDG selector
       );
   // void _showFilterDialog() {
