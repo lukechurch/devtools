@@ -133,7 +133,7 @@ class IDGBody extends AnimatedWidget {
                 IconButton(
                   padding: const EdgeInsets.all(0.0),
                   onPressed: () => idgController.toggleIDGVisible(false),
-                  icon: const Icon(Icons.close),
+                  icon: const Icon(Icons.arrow_right_alt),
                 ),
               ],
             ),

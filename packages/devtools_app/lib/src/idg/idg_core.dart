@@ -29,10 +29,10 @@ class Action {
 }
 
 class Step {
-  Step(
+  Step({
     this.title,
     this.text,
-    this.nextStepGuard, {
+    this.nextStepGuard,
     this.isTitleButton = false,
     this.buttons = const <Action>[],
   });
