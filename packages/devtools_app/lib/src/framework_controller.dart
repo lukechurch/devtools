@@ -60,6 +60,13 @@ class FrameworkController {
   /// Notifies when a device disconnects from DevTools.
   Stream get onDisconnected => _disconnectedController.stream;
 
+  /// Example for how to create and respond to new actions
+  final StreamController<int> _testController = StreamController.broadcast();
+  Stream<int> get onTest => _testController.stream;
+  void notifyTest(int id) {
+    _testController.add(id);
+  }
+
   void _init() {
     serviceManager.connectedState.addListener(() {
       final connectionState = serviceManager.connectedState.value;

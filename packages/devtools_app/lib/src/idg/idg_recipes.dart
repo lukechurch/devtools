@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:devtools_app/src/app.dart';
+import 'package:devtools_app/src/performance/performance_screen.dart';
 import 'package:http/http.dart' as http;
 
 import '../globals.dart';
@@ -116,10 +119,14 @@ var s7 = idg_core.Step(
         idg_core.PresenceSensor('APP_START'.toLowerCase(), 'App started'),
     buttons: [
       idg_core.Action('switch panel', () async {
-        print('switch panel clicked');
-        // minimalRecipe.reset();
-        print(defaultScreens.first);
-        // await serviceManager.performHotReload();
+        frameworkController.notifyShowPageId(PerformanceScreen.id);
+
+        // Timer(Duration(milliseconds: 300), () {
+        // frameworkController.notifyTest(4);
+        // });
+      }),
+      idg_core.Action('Select element', () async {
+        frameworkController.notifyTest(4);
       })
     ]);
 
