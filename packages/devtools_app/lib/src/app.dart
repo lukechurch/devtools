@@ -6,6 +6,7 @@
 
 import 'dart:async';
 
+import 'package:devtools_app/devtools_app.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -50,6 +51,32 @@ import 'shared/scaffold.dart';
 import 'shared/screen.dart';
 import 'shared/snapshot_screen.dart';
 import 'shared/theme.dart';
+import 'globals.dart';
+import 'initializer.dart';
+import 'inspector/inspector_controller.dart';
+import 'inspector/inspector_screen.dart';
+import 'landing_screen.dart';
+import 'logging/logging_controller.dart';
+import 'logging/logging_screen.dart';
+import 'idg/idg_controller.dart';
+import 'idg/idg_screen.dart';
+import 'memory/memory_controller.dart';
+import 'memory/memory_screen.dart';
+import 'network/network_controller.dart';
+import 'network/network_screen.dart';
+import 'notifications.dart';
+import 'performance/legacy/performance_controller.dart';
+import 'performance/legacy/performance_screen.dart';
+import 'performance/performance_controller.dart';
+import 'performance/performance_screen.dart';
+import 'profiler/profiler_screen.dart';
+import 'profiler/profiler_screen_controller.dart';
+import 'provider/provider_screen.dart';
+import 'routing.dart';
+import 'scaffold.dart';
+import 'screen.dart';
+import 'snapshot_screen.dart';
+import 'theme.dart';
 import 'ui/service_extension_widgets.dart';
 
 // Assign to true to use a sample implementation of a conditional screen.
@@ -96,6 +123,7 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
   bool _denseModeEnabled;
 
   ReleaseNotesController releaseNotesController;
+  IDGController idgController;
 
   @override
   void initState() {
@@ -131,6 +159,7 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
     });
 
     releaseNotesController = ReleaseNotesController();
+    idgController = IDGController();
   }
 
   @override
@@ -227,6 +256,7 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
                   if (serviceManager.connectedApp.isFlutterAppNow) ...[
                     HotReloadButton(),
                     HotRestartButton(),
+                    OpenIDGAction(idgController: idgController),
                   ],
                   OpenSettingsAction(),
                   ReportFeedbackButton(),
@@ -318,6 +348,8 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
         child: Notifications(
           child: ReleaseNotesViewer(
             releaseNotesController: releaseNotesController,
+          child: IDGScreen(
+            idgController: idgController,
             child: child,
           ),
         ),
@@ -466,6 +498,32 @@ class OpenSettingsAction extends StatelessWidget {
           alignment: Alignment.center,
           child: Icon(
             Icons.settings,
+            size: actionsIconSize,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class OpenIDGAction extends StatelessWidget {
+  OpenIDGAction({Key key, this.idgController}) : super(key: key);
+  IDGController idgController;
+
+  @override
+  Widget build(BuildContext context) {
+    return DevToolsTooltip(
+      message: 'IDG',
+      child: InkWell(
+        onTap: () async {
+          idgController.toggleIDGVisible(true);
+        },
+        child: Container(
+          width: DevToolsScaffold.actionWidgetSize,
+          height: DevToolsScaffold.actionWidgetSize,
+          alignment: Alignment.center,
+          child: Icon(
+            Octicons.clippy,
             size: actionsIconSize,
           ),
         ),
