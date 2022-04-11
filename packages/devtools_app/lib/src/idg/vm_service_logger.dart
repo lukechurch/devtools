@@ -7,8 +7,8 @@ import 'dart:convert';
 
 import 'package:vm_service/vm_service.dart';
 
-import '../core/message_bus.dart';
-import '../globals.dart';
+import '../primitives/message_bus.dart';
+import '../shared/globals.dart';
 
 /// A class which listens for all traffic over the VM service protocol and logs
 /// the traffic to the message bus.
@@ -23,8 +23,8 @@ class VmServiceTrafficLogger {
 
   static const eventName = 'devtools.service';
 
-  StreamSubscription _sendSub;
-  StreamSubscription _receiveSub;
+  late StreamSubscription _sendSub;
+  late StreamSubscription _receiveSub;
 
   void _logServiceProtocolCalls(String message) {
     final Map m = jsonDecode(message);

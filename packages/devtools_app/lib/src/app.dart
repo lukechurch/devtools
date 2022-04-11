@@ -51,32 +51,8 @@ import 'shared/scaffold.dart';
 import 'shared/screen.dart';
 import 'shared/snapshot_screen.dart';
 import 'shared/theme.dart';
-import 'globals.dart';
-import 'initializer.dart';
-import 'inspector/inspector_controller.dart';
-import 'inspector/inspector_screen.dart';
-import 'landing_screen.dart';
-import 'logging/logging_controller.dart';
-import 'logging/logging_screen.dart';
 import 'idg/idg_controller.dart';
 import 'idg/idg_screen.dart';
-import 'memory/memory_controller.dart';
-import 'memory/memory_screen.dart';
-import 'network/network_controller.dart';
-import 'network/network_screen.dart';
-import 'notifications.dart';
-import 'performance/legacy/performance_controller.dart';
-import 'performance/legacy/performance_screen.dart';
-import 'performance/performance_controller.dart';
-import 'performance/performance_screen.dart';
-import 'profiler/profiler_screen.dart';
-import 'profiler/profiler_screen_controller.dart';
-import 'provider/provider_screen.dart';
-import 'routing.dart';
-import 'scaffold.dart';
-import 'screen.dart';
-import 'snapshot_screen.dart';
-import 'theme.dart';
 import 'ui/service_extension_widgets.dart';
 
 // Assign to true to use a sample implementation of a conditional screen.
@@ -344,16 +320,16 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
         theme: Theme.of(context),
       ),
       builder: (context, child) => Provider<AnalyticsController>.value(
-        value: widget.analyticsController,
-        child: Notifications(
-          child: ReleaseNotesViewer(
-            releaseNotesController: releaseNotesController,
-          child: IDGScreen(
-            idgController: idgController,
-            child: child,
-          ),
-        ),
-      ),
+          value: widget.analyticsController,
+          child: Notifications(
+            child: ReleaseNotesViewer(
+              releaseNotesController: releaseNotesController,
+              child: IDGScreen(
+                idgController: idgController,
+                child: child,
+              ),
+            ),
+          )),
       routerDelegate: DevToolsRouterDelegate(_getPage),
       routeInformationParser: DevToolsRouteInformationParser(),
       // Disable default scrollbar behavior on web to fix duplicate scrollbars
@@ -516,6 +492,7 @@ class OpenIDGAction extends StatelessWidget {
       message: 'IDG',
       child: InkWell(
         onTap: () async {
+          print("Toggle IDG");
           idgController.toggleIDGVisible(true);
         },
         child: Container(

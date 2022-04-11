@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:devtools_app/src/app.dart';
-import 'package:devtools_app/src/performance/performance_screen.dart';
+import 'package:devtools_app/src/screens/performance/performance_screen.dart';
 import 'package:http/http.dart' as http;
 
-import '../globals.dart';
+import '../shared/globals.dart';
 import 'idg_core.dart' as idg_core;
 
 var s0 = idg_core.Step(

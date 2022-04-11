@@ -3,7 +3,7 @@ import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'idg_controller.dart';
 import 'dart:async';
 
-IDGServer server;
+late IDGServer server;
 
 // void start() {
 // if (server != null) server = IDGServer();

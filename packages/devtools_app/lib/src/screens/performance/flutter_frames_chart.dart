@@ -69,6 +69,8 @@ class _FlutterFramesChartState extends State<FlutterFramesChart>
 
   late final ScrollController _frameNumbersScrollController;
 
+  late final ScrollController scrollController;
+
   FlutterFrame? _selectedFrame;
 
   /// Milliseconds per pixel value for the y-axis.
@@ -79,7 +81,7 @@ class _FlutterFramesChartState extends State<FlutterFramesChart>
       // Multiply by two to reach two times the target frame time.
       1 / widget.displayRefreshRate * 1000 * 2 / defaultChartHeight;
 
-  StreamSubscription<int> _testSubscription;
+  late StreamSubscription<int> _testSubscription;
 
   @override
   void initState() {
@@ -89,7 +91,8 @@ class _FlutterFramesChartState extends State<FlutterFramesChart>
     _frameNumbersScrollController = _linkedScrollControllerGroup.addAndGet();
     scrollController = ScrollController()
       ..addListener(() {
-        horizontalScrollOffset = scrollController.offset;
+        //TODO(luke): What was this for?
+        //horizontalScrollOffset = scrollController.offset;
       });
 
     _testSubscription = frameworkController.onTest.listen(selectFrame);
