@@ -553,7 +553,7 @@ class MessageColumn extends ColumnData<LogData>
   }
 
   @override
-  Widget? build(
+  Widget build(
     BuildContext context,
     LogData data, {
     bool isRowSelected = false,
@@ -606,7 +606,7 @@ class MessageColumn extends ColumnData<LogData>
         maxLines: 1,
       );
     } else {
-      return null;
+      return const SizedBox.shrink();
     }
   }
 }
