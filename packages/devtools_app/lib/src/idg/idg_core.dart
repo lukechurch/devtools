@@ -11,7 +11,7 @@ class Recipe {
   Set<Sensor> get allSensors {
     final Set<Sensor> sensors = Set<Sensor>();
     for (var step in steps) {
-      sensors.add(step.nextStepGuard);
+      sensors.add(step.nextStepGuard!);
     }
     return sensors;
   }
@@ -37,16 +37,16 @@ class Step {
     this.buttons = const <Action>[],
   });
 
-  String title;
-  bool isTitleButton;
-  String text;
-  Sensor nextStepGuard;
+  String? title;
+  late bool isTitleButton;
+  String? text;
+  Sensor? nextStepGuard;
   // Action action;
-  bool get isDone => nextStepGuard.isDone;
+  bool get isDone => nextStepGuard!.isDone;
   bool isActive = false;
   List<Action> buttons;
 
-  void reset() => nextStepGuard.reset();
+  void reset() => nextStepGuard!.reset();
 }
 
 abstract class Sensor {
@@ -69,8 +69,8 @@ class PerfSensor extends Sensor {
     reset();
   }
 
-  bool triggered;
-  int elapsedMilliseconds;
+  late bool triggered;
+  late int elapsedMilliseconds;
 
   @override
   void trigger(IDGEvent e) {
@@ -101,7 +101,7 @@ class PresenceSensor extends Sensor {
     reset();
   }
 
-  bool triggered;
+  late bool triggered;
 
   @override
   void trigger(IDGEvent e) {
@@ -128,7 +128,7 @@ class FileChangeSensor extends Sensor {
     reset();
   }
 
-  bool triggered;
+  late bool triggered;
 
   @override
   void trigger(IDGEvent e) {

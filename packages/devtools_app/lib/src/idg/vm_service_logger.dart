@@ -23,8 +23,8 @@ class VmServiceTrafficLogger {
 
   static const eventName = 'devtools.service';
 
-  late StreamSubscription _sendSub;
-  late StreamSubscription _receiveSub;
+  late StreamSubscription? _sendSub;
+  late StreamSubscription? _receiveSub;
 
   void _logServiceProtocolCalls(String message) {
     final Map m = jsonDecode(message);
@@ -32,10 +32,12 @@ class VmServiceTrafficLogger {
     final String method = m['method'];
     final String id = m['id'];
 
-    messageBus.addEvent(BusEvent(
-      eventName,
-      data: '⇨ #$id $method()\n$message',
-    ));
+    messageBus.addEvent(
+      BusEvent(
+        eventName,
+        data: '⇨ #$id $method()\n$message',
+      ),
+    );
   }
 
   void _logServiceProtocolResponses(String message) {

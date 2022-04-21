@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../devtools_app.dart' hide LogData, timeFormat;
 import '../analytics/analytics.dart' as ga;
 import '../primitives/auto_dispose_mixin.dart';
 import '../shared/common_widgets.dart';
@@ -31,9 +32,9 @@ final loggingSearchFieldKey = GlobalKey(debugLabel: 'LoggingSearchFieldKey');
 
 class IDGScreen extends StatefulWidget {
   const IDGScreen({
-    Key key,
-    @required this.idgController,
-    @required this.child,
+    Key? key,
+    required this.idgController,
+    required this.child,
   }) : super(key: key);
 
   final IDGController idgController;
@@ -49,12 +50,12 @@ class _IDGScreenState extends State<IDGScreen>
   static const viewerWidth = 600.0;
 
   /// Animation controller for animating the opening and closing of the viewer.
-  AnimationController visibilityController;
+  late AnimationController visibilityController;
 
   /// A curved animation that matches [visibilityController].
-  Animation<double> visibilityAnimation;
+  late Animation<double> visibilityAnimation;
 
-  bool isVisible;
+  late bool isVisible;
 
   @override
   void initState() {
@@ -98,9 +99,9 @@ class _IDGScreenState extends State<IDGScreen>
 
 class IDGBody extends AnimatedWidget {
   const IDGBody({
-    Key key,
-    @required this.idgController,
-    @required Animation<double> visibilityAnimation,
+    Key? key,
+    required this.idgController,
+    required Animation<double> visibilityAnimation,
   }) : super(key: key, listenable: visibilityAnimation);
 
   final IDGController idgController;
@@ -147,8 +148,8 @@ class IDGBody extends AnimatedWidget {
 
 class IDGScreenBody extends StatefulWidget {
   const IDGScreenBody({
-    Key key,
-    @required this.idgController,
+    Key? key,
+    required this.idgController,
   }) : super(key: key);
 
   final IDGController idgController;
@@ -160,18 +161,18 @@ class IDGScreenBody extends StatefulWidget {
 
 class _IDGScreenBodyState extends State<IDGScreenBody>
     with AutoDisposeMixin, SearchFieldMixin<IDGScreenBody> {
-  _IDGScreenBodyState({@required this.idgController}) : super();
+  _IDGScreenBodyState({required this.idgController}) : super();
 
-  final IDGController idgController;
+  late final IDGController idgController;
 
-  LogData selected;
+  late LogData selected;
 
-  List<LogData> filteredLogs;
+  late List<LogData> filteredLogs;
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<bool>(
-      stream: idgController.onEngineUpdated,
+      stream: idgController.onEngineUpdated as Stream<bool>,
       builder: (context, snapshot) => Expanded(
         child: _buildIdgBody(idgController.idgEngine.getRecipe()),
       ),
@@ -214,7 +215,7 @@ class _IDGScreenBodyState extends State<IDGScreenBody>
           children: [
             Checkbox(
               value: s.isDone,
-              onChanged: (bool value) {
+              onChanged: (bool? value) {
                 // TODO -- do more than just setting the step done value
                 // s.isDone = value;
                 setState(() {});
@@ -230,14 +231,14 @@ class _IDGScreenBodyState extends State<IDGScreenBody>
                   Flexible(
                     child: s.isTitleButton
                         ? ElevatedButton(
-                            child: Text(s.title, textScaleFactor: 1.3),
+                            child: Text(s.title!, textScaleFactor: 1.3),
                             onPressed: () {
                               // TODO
                             },
                           )
                         : Padding(
                             padding: EdgeInsets.fromLTRB(16, 13, 16, 13),
-                            child: Text(s.title, textScaleFactor: 1.3),
+                            child: Text(s.title!, textScaleFactor: 1.3),
                           ),
                   ),
                 ],
@@ -245,7 +246,7 @@ class _IDGScreenBodyState extends State<IDGScreenBody>
               Row(children: [
                 Flexible(
                   child: Text(
-                    s.text,
+                    s.text!,
                     softWrap: true,
                     textAlign: TextAlign.justify,
                   ),
@@ -255,7 +256,7 @@ class _IDGScreenBodyState extends State<IDGScreenBody>
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   Text(
-                    '${s.nextStepGuard.presentationName} : ${s.nextStepGuard.valueString()}',
+                    '${s.nextStepGuard!.presentationName} : ${s.nextStepGuard!.valueString()}',
                     style: const TextStyle(
                       color: Colors.lightBlue,
                       fontFamily: 'courier',
@@ -312,12 +313,12 @@ class _IDGScreenBodyState extends State<IDGScreenBody>
 
 class LogsTable extends StatelessWidget {
   LogsTable({
-    Key key,
-    @required this.data,
-    @required this.onItemSelected,
-    @required this.selectionNotifier,
-    @required this.searchMatchesNotifier,
-    @required this.activeSearchMatchNotifier,
+    Key? key,
+    required this.data,
+    required this.onItemSelected,
+    required this.selectionNotifier,
+    required this.searchMatchesNotifier,
+    required this.activeSearchMatchNotifier,
   }) : super(key: key);
 
   final List<LogData> data;
@@ -351,7 +352,7 @@ class LogsTable extends StatelessWidget {
 }
 
 class LogDetails extends StatefulWidget {
-  const LogDetails({Key key, @required this.log}) : super(key: key);
+  const LogDetails({Key? key, required this.log}) : super(key: key);
 
   final LogData log;
 
@@ -364,8 +365,8 @@ class LogDetails extends StatefulWidget {
 
 class _LogDetailsState extends State<LogDetails>
     with SingleTickerProviderStateMixin {
-  String _lastDetails;
-  ScrollController scrollController;
+  late String _lastDetails;
+  late ScrollController scrollController;
 
   @override
   void initState() {
@@ -410,9 +411,9 @@ class _LogDetailsState extends State<LogDetails>
   }
 
   Widget _buildSimpleLog(BuildContext context, LogData log) {
-    final disabled = log?.details == null || log.details.isEmpty;
+    final disabled = log?.details == null || log.details!.isEmpty;
 
-    final details = log?.details;
+    final details = log.details!;
     if (details != _lastDetails) {
       if (scrollController.hasClients) {
         // Make sure we change the scroll if the log details shown have changed.
@@ -485,7 +486,7 @@ class _KindColumn extends ColumnData<LogData>
     BuildContext context,
     LogData item, {
     bool isRowSelected = false,
-    VoidCallback onPressed,
+    VoidCallback? onPressed,
   }) {
     final String kind = item.kind;
 
@@ -529,7 +530,7 @@ class MessageColumn extends ColumnData<LogData>
 
   @override
   String getValue(LogData dataObject) =>
-      dataObject.summary ?? dataObject.details;
+      dataObject.summary! ?? dataObject.details!;
 
   @override
   int compare(LogData a, LogData b) {
@@ -540,9 +541,9 @@ class MessageColumn extends ColumnData<LogData>
     final valueAIsFrameLog = valueA.startsWith(regex);
     final valueBIsFrameLog = valueB.startsWith(regex);
     if (valueAIsFrameLog && valueBIsFrameLog) {
-      final frameNumberA = regex.firstMatch(valueA)[1];
-      final frameNumberB = regex.firstMatch(valueB)[1];
-      return int.parse(frameNumberA).compareTo(int.parse(frameNumberB));
+      final frameNumberA = regex.firstMatch(valueA)![1];
+      final frameNumberB = regex.firstMatch(valueB)![1];
+      return int.parse(frameNumberA!).compareTo(int.parse(frameNumberB!));
     } else if (valueAIsFrameLog && !valueBIsFrameLog) {
       return -1;
     } else if (!valueAIsFrameLog && valueBIsFrameLog) {
@@ -552,11 +553,11 @@ class MessageColumn extends ColumnData<LogData>
   }
 
   @override
-  Widget build(
+  Widget? build(
     BuildContext context,
     LogData data, {
     bool isRowSelected = false,
-    VoidCallback onPressed,
+    VoidCallback? onPressed,
   }) {
     TextStyle textStyle = Theme.of(context).fixedFontStyle;
     if (isRowSelected) {
@@ -573,7 +574,7 @@ class MessageColumn extends ColumnData<LogData>
 
       double frameLength = 0.0;
       try {
-        final int micros = jsonDecode(data.details)['elapsed'];
+        final int micros = jsonDecode(data.details!)['elapsed'];
         frameLength = micros * 3.0 / 1000.0;
       } catch (e) {
         // ignore
