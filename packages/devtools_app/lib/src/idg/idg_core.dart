@@ -238,11 +238,14 @@ class IDGEngine {
   // List<IDGEvent> events = [];
 
   void addRecipes(Recipe r) {
+    print("IDG addRecipes $r");
     _recipesToWatch.add(r);
     _senorsEventsToWatch.addAll(r.allSensors);
   }
 
   void notifyOfEvent(IDGEvent event) {
+    bool sensorSeen = false;
+
     for (Sensor sensor in _senorsEventsToWatch) {
       // DEBUG for matching diagnostics
       // print(
@@ -251,10 +254,13 @@ class IDGEngine {
         print("IDG: Triggering sensor: ${sensor.sensorName}");
         sensor.trigger(event);
         _updateActiveSteps();
+        sensorSeen = true;
       }
     }
     // DEBUG
-    print("IDG: No sensor found for : ${event.eventName} : ${event.eventData}");
+    if (!sensorSeen)
+      print(
+          "IDG: No sensor found for : ${event.eventName} : ${event.eventData}");
   }
 
   void _updateActiveSteps() {

@@ -173,7 +173,6 @@ class IDGController extends DisposableController
     idgEngine = new IDGEngine();
     idgEngine.addRecipes(minimalRecipe);
 
-    // TODO: Luke uncomment these
     autoDisposeStreamSubscription(
         serviceManager.onConnectionAvailable.listen(_handleConnectionStart));
 
@@ -211,8 +210,6 @@ class IDGController extends DisposableController
 
   void _updateData(List<LogData> logs) {
     data = logs;
-    filterData(activeFilter.value!);
-    refreshSearchMatches();
     _updateSelection();
     _updateStatus();
   }
@@ -386,6 +383,7 @@ class IDGController extends DisposableController
   }
 
   void _handleGCEvent(Event e) {
+    print("_handleGCEvent");
     final HeapSpace newSpace = HeapSpace.parse(e.json!['new'])!;
     final HeapSpace oldSpace = HeapSpace.parse(e.json!['old'])!;
     final Map<dynamic, dynamic> isolateRef = e.json!['isolate'];
@@ -773,9 +771,8 @@ class _StdoutEventHandler {
     if (message == '\n') {
       loggingController.log(data);
     } else {
-      buffer = data;
       timer = Timer(const Duration(milliseconds: 1), () {
-        loggingController.log(buffer!);
+        loggingController.log(data);
         buffer = null;
       });
     }

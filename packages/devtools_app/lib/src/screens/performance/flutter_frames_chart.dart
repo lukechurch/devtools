@@ -92,7 +92,7 @@ class _FlutterFramesChartState extends State<FlutterFramesChart>
     scrollController = ScrollController()
       ..addListener(() {
         //TODO(luke): What was this for?
-        //horizontalScrollOffset = scrollController.offset;
+        // horizontalScrollOffset = scrollController.offset;
       });
 
     _testSubscription = frameworkController.onTest.listen(selectFrame);
@@ -161,7 +161,7 @@ class _FlutterFramesChartState extends State<FlutterFramesChart>
     _framesScrollController.dispose();
     _frameNumbersScrollController.dispose();
     scrollController.dispose();
-    _testSubscription?.cancel();
+    _testSubscription.cancel();
     super.dispose();
   }
 
