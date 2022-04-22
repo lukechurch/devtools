@@ -240,6 +240,7 @@ class IDGEngine {
   void addRecipes(Recipe r) {
     print("IDG addRecipes $r");
     _recipesToWatch.add(r);
+    print("IDG addRecipes - adding sensors ${r.allSensors}");
     _senorsEventsToWatch.addAll(r.allSensors);
   }
 

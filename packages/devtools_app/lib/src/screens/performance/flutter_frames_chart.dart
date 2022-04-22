@@ -91,6 +91,7 @@ class _FlutterFramesChartState extends State<FlutterFramesChart>
     _frameNumbersScrollController = _linkedScrollControllerGroup.addAndGet();
     scrollController = ScrollController()
       ..addListener(() {
+        print("scroll controller trigger");
         //TODO(luke): What was this for?
         // horizontalScrollOffset = scrollController.offset;
       });
