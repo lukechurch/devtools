@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -68,6 +69,8 @@ class _FlutterFramesChartState extends State<FlutterFramesChart>
 
   late final ScrollController _frameNumbersScrollController;
 
+  late final ScrollController scrollController;
+
   FlutterFrame? _selectedFrame;
 
   /// Milliseconds per pixel value for the y-axis.
@@ -78,12 +81,22 @@ class _FlutterFramesChartState extends State<FlutterFramesChart>
       // Multiply by two to reach two times the target frame time.
       1 / widget.displayRefreshRate * 1000 * 2 / defaultChartHeight;
 
+  late StreamSubscription<int> _testSubscription;
+
   @override
   void initState() {
     super.initState();
     _linkedScrollControllerGroup = LinkedScrollControllerGroup();
     _framesScrollController = _linkedScrollControllerGroup.addAndGet();
     _frameNumbersScrollController = _linkedScrollControllerGroup.addAndGet();
+    scrollController = ScrollController()
+      ..addListener(() {
+        print("scroll controller trigger");
+        //TODO(luke): What was this for?
+        // horizontalScrollOffset = scrollController.offset;
+      });
+
+    _testSubscription = frameworkController.onTest.listen(selectFrame);
   }
 
   @override
@@ -103,6 +116,11 @@ class _FlutterFramesChartState extends State<FlutterFramesChart>
     });
 
     _maybeShowShaderJankMessage();
+  }
+
+  void selectFrame(int index) {
+    print('-- $index');
+    _controller.toggleSelectedFrame(_controller.flutterFrames.value[index]);
   }
 
   @override
@@ -143,6 +161,8 @@ class _FlutterFramesChartState extends State<FlutterFramesChart>
   void dispose() {
     _framesScrollController.dispose();
     _frameNumbersScrollController.dispose();
+    scrollController.dispose();
+    _testSubscription.cancel();
     super.dispose();
   }
 

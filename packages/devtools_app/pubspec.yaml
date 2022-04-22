@@ -53,6 +53,8 @@ dependencies:
   vm_service: ^8.2.2
   vm_snapshot_analysis: ^0.7.1
   web_socket_channel: ^2.1.0
+  shelf: ^1.0.0
+  shelf_router: ^1.0.0
   # widget_icons: ^0.0.1
 
 dev_dependencies:

@@ -6,6 +6,7 @@
 
 import 'dart:async';
 
+import 'package:devtools_app/devtools_app.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -50,6 +51,8 @@ import 'shared/scaffold.dart';
 import 'shared/screen.dart';
 import 'shared/snapshot_screen.dart';
 import 'shared/theme.dart';
+import 'idg/idg_controller.dart';
+import 'idg/idg_screen.dart';
 import 'ui/service_extension_widgets.dart';
 
 // Assign to true to use a sample implementation of a conditional screen.
@@ -96,6 +99,7 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
   bool _denseModeEnabled;
 
   ReleaseNotesController releaseNotesController;
+  IDGController idgController;
 
   @override
   void initState() {
@@ -131,6 +135,7 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
     });
 
     releaseNotesController = ReleaseNotesController();
+    idgController = IDGController();
   }
 
   @override
@@ -227,6 +232,7 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
                   if (serviceManager.connectedApp.isFlutterAppNow) ...[
                     HotReloadButton(),
                     HotRestartButton(),
+                    OpenIDGAction(idgController: idgController),
                   ],
                   OpenSettingsAction(),
                   ReportFeedbackButton(),
@@ -314,14 +320,16 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
         theme: Theme.of(context),
       ),
       builder: (context, child) => Provider<AnalyticsController>.value(
-        value: widget.analyticsController,
-        child: Notifications(
-          child: ReleaseNotesViewer(
-            releaseNotesController: releaseNotesController,
-            child: child,
-          ),
-        ),
-      ),
+          value: widget.analyticsController,
+          child: Notifications(
+            child: ReleaseNotesViewer(
+              releaseNotesController: releaseNotesController,
+              child: IDGScreen(
+                idgController: idgController,
+                child: child,
+              ),
+            ),
+          )),
       routerDelegate: DevToolsRouterDelegate(_getPage),
       routeInformationParser: DevToolsRouteInformationParser(),
       // Disable default scrollbar behavior on web to fix duplicate scrollbars
@@ -466,6 +474,33 @@ class OpenSettingsAction extends StatelessWidget {
           alignment: Alignment.center,
           child: Icon(
             Icons.settings,
+            size: actionsIconSize,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class OpenIDGAction extends StatelessWidget {
+  OpenIDGAction({Key key, this.idgController}) : super(key: key);
+  IDGController idgController;
+
+  @override
+  Widget build(BuildContext context) {
+    return DevToolsTooltip(
+      message: 'IDG',
+      child: InkWell(
+        onTap: () async {
+          print("Toggle IDG");
+          idgController.toggleIDGVisible(true);
+        },
+        child: Container(
+          width: DevToolsScaffold.actionWidgetSize,
+          height: DevToolsScaffold.actionWidgetSize,
+          alignment: Alignment.center,
+          child: Icon(
+            Octicons.clippy,
             size: actionsIconSize,
           ),
         ),
