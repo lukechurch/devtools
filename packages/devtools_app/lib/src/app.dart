@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// @dart=2.9
-
 import 'dart:async';
 
 import 'package:devtools_app/devtools_app.dart';
@@ -99,7 +97,7 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
   bool _denseModeEnabled = false;
 
   late ReleaseNotesController releaseNotesController;
-  IDGController idgController;
+  late IDGController idgController;
 
   @override
   void initState() {
@@ -326,7 +324,7 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
               releaseNotesController: releaseNotesController,
               child: IDGScreen(
                 idgController: idgController,
-                child: child,
+                child: child!,
               ),
             ),
           )),
@@ -485,7 +483,7 @@ class OpenSettingsAction extends StatelessWidget {
 }
 
 class OpenIDGAction extends StatelessWidget {
-  OpenIDGAction({Key key, this.idgController}) : super(key: key);
+  OpenIDGAction({Key? key, required this.idgController}) : super(key: key);
   IDGController idgController;
 
   @override
@@ -673,9 +671,9 @@ class CheckboxSetting extends StatelessWidget {
   void toggleSetting(bool? newValue) {
     ga.select(
       analytics_constants.settingsDialog,
-      '$gaItem-${newValue ? 'enabled' : 'disabled'}',
+      '$gaItem-${newValue == true ? 'enabled' : 'disabled'}',
     );
-    toggle(newValue);
+    toggle(newValue == true);
   }
 }
 
