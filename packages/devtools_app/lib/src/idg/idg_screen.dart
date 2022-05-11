@@ -187,22 +187,69 @@ class _IDGScreenBodyState extends State<IDGScreenBody>
   }
 
   Widget _buildIdgBody(idg_core.Recipe r) {
-    List<Widget> widgets = [_idgSelector()];
-
-    for (idg_core.Step s in r.steps) {
-      widgets.add(
-        Row(
-          children: [
-            Expanded(child: _buildIdgStep(s)),
-          ],
-        ),
-      );
-    }
-
     return ListView(
       padding: const EdgeInsets.all(8),
       shrinkWrap: true,
-      children: widgets,
+      children: [
+        _idgSelector(),
+        ExpansionPanelList(
+          children: r.steps.map((s) {
+            return ExpansionPanel(
+              headerBuilder: (context, isExpanded) {
+                return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.only(top: 12),
+                        child: Icon(
+                          Icons.arrow_right,
+                          color: s.isActive ? Colors.green : Colors.transparent,
+                          size: 24,
+                        ),
+                      ),
+                      Stack(
+                        children: [
+                          Checkbox(
+                            value: s.isDone,
+                            onChanged: (bool? value) {
+                              // TODO -- do more than just setting the step done value
+                              // s.isDone = value;
+                              setState(() {});
+                            },
+                          ),
+                        ],
+                      ),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Flexible(
+                              child: s.isTitleButton
+                                  ? ElevatedButton(
+                                      child:
+                                          Text(s.title!, textScaleFactor: 1.3),
+                                      onPressed: () {
+                                        // TODO
+                                      },
+                                    )
+                                  : Padding(
+                                      padding:
+                                          EdgeInsets.fromLTRB(16, 13, 16, 13),
+                                      child:
+                                          Text(s.title!, textScaleFactor: 1.3),
+                                    ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ]);
+              },
+              body: _buildIdgStep(s),
+              isExpanded: s.isActive,
+              canTapOnHeader: true,
+            );
+          }).toList(),
+        )
+      ],
     );
   }
 
@@ -210,98 +257,64 @@ class _IDGScreenBodyState extends State<IDGScreenBody>
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: EdgeInsets.only(top: 12),
-          child: Icon(
-            Icons.arrow_right,
-            color: s.isActive ? Colors.green : Colors.transparent,
-            size: 24,
-          ),
-        ),
-        Stack(
-          children: [
-            Checkbox(
-              value: s.isDone,
-              onChanged: (bool? value) {
-                // TODO -- do more than just setting the step done value
-                // s.isDone = value;
-                setState(() {});
-              },
-            ),
-          ],
-        ),
         Expanded(
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Flexible(
-                    child: s.isTitleButton
-                        ? ElevatedButton(
-                            child: Text(s.title!, textScaleFactor: 1.3),
-                            onPressed: () {
-                              // TODO
-                            },
-                          )
-                        : Padding(
-                            padding: EdgeInsets.fromLTRB(16, 13, 16, 13),
-                            child: Text(s.title!, textScaleFactor: 1.3),
-                          ),
-                  ),
-                ],
-              ),
-              Row(children: [
-                Flexible(
-                  child: Text(
-                    s.text!,
-                    softWrap: true,
-                    textAlign: TextAlign.justify,
-                  ),
-                ),
-              ]),
-              if (s.imageUrl != null)
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              children: [
                 Row(children: [
                   Flexible(
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      constraints: (s.imageMaxHeight != null)
-                          ? BoxConstraints(
-                              maxHeight: s.imageMaxHeight!,
-                            )
-                          : const BoxConstraints(),
-                      child: Image.file(
-                        File(s.imageUrl!),
-                        fit: BoxFit.scaleDown,
-                      ),
+                    child: Text(
+                      s.text!,
+                      softWrap: true,
+                      textAlign: TextAlign.justify,
                     ),
                   ),
                 ]),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Text(
-                    '${s.nextStepGuard!.presentationName} : ${s.nextStepGuard!.valueString()}',
-                    style: const TextStyle(
-                      color: Colors.lightBlue,
-                      fontFamily: 'courier',
+                if (s.imageUrl != null)
+                  Row(children: [
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        constraints: (s.imageMaxHeight != null)
+                            ? BoxConstraints(
+                                maxHeight: s.imageMaxHeight!,
+                              )
+                            : const BoxConstraints(),
+                        child: Image.file(
+                          File(s.imageUrl!),
+                          fit: BoxFit.scaleDown,
+                        ),
+                      ),
                     ),
-                  )
-                ],
-              ),
-              Row(
-                children: s.buttons
-                    .map((e) => Padding(
-                        padding: EdgeInsets.only(right: 8),
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            await e.onClick();
-                          },
-                          child: Text(e.name),
-                        )))
-                    .toList(),
-              ),
-              Row(children: [Text('')]),
-            ],
+                  ]),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text(
+                      '${s.nextStepGuard!.presentationName} : ${s.nextStepGuard!.valueString()}',
+                      style: const TextStyle(
+                        color: Colors.lightBlue,
+                        fontFamily: 'courier',
+                      ),
+                    )
+                  ],
+                ),
+                Row(
+                  children: s.buttons
+                      .map((e) => Padding(
+                          padding: EdgeInsets.only(right: 8),
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              await e.onClick();
+                            },
+                            child: Text(e.name),
+                          )))
+                      .toList(),
+                ),
+                Row(children: [Text('')]),
+              ],
+            ),
           ),
         ),
       ],
