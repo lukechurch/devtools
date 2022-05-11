@@ -182,12 +182,23 @@ var oom2 = idg_core.Step(
   nextStepGuard: idg_core.MaskUntil(() => oom1.isDone,
       idg_core.PresenceSensor('mem-snapshot', 'snapshot taken')),
   buttons: [
-    // idg_core.Action('take a snapshot', () async {
-    //   print('take a snapshot button clicked');
-
-    //   MemoryController memoryScreenController = globals[MemoryController];
-    //   memoryScreenController.createSnapshotByLibrary();
-    // })
+    idg_core.Action('Show me the Snapshot button', () async {
+      final devtools_app.MemoryController memoryScreenController =
+          globals[devtools_app.MemoryController];
+      memoryScreenController.toggleSnapshotButtonHighlighted(true);
+      Timer(
+        const Duration(milliseconds: 300),
+        () => memoryScreenController.toggleSnapshotButtonHighlighted(false),
+      );
+      Timer(
+        const Duration(milliseconds: 600),
+        () => memoryScreenController.toggleSnapshotButtonHighlighted(true),
+      );
+      Timer(
+        const Duration(milliseconds: 900),
+        () => memoryScreenController.toggleSnapshotButtonHighlighted(false),
+      );
+    })
   ],
 );
 

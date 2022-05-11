@@ -190,6 +190,7 @@ class HeapTreeViewState extends State<HeapTree>
   int lastSnapshotMemoryTotal = 0;
 
   late bool treeMapVisible;
+  late bool isSnapshotButtonHighlighted;
 
   late AnimationController _animation;
 
@@ -275,6 +276,14 @@ class HeapTreeViewState extends State<HeapTree>
     addAutoDisposeListener(_controller.treeMapVisible, () {
       setState(() {
         treeMapVisible = _controller.treeMapVisible.value;
+      });
+    });
+
+    isSnapshotButtonHighlighted = _controller.snapshotButtonHighlighted.value;
+    addAutoDisposeListener(_controller.snapshotButtonHighlighted, () {
+      setState(() {
+        isSnapshotButtonHighlighted =
+            _controller.snapshotButtonHighlighted.value;
       });
     });
 
@@ -595,6 +604,7 @@ class HeapTreeViewState extends State<HeapTree>
             icon: Icons.camera,
             label: 'Take Heap Snapshot',
             onPressed: _isSnapshotRunning ? null : _takeHeapSnapshot,
+            color: isSnapshotButtonHighlighted ? Colors.blue : Colors.white,
           ),
           const SizedBox(width: defaultSpacing),
           Row(
