@@ -14,6 +14,7 @@ import 'package:provider/provider.dart';
 import '../../analytics/analytics.dart' as ga;
 import '../../analytics/constants.dart' as analytics_constants;
 import '../../config_specific/logger/logger.dart' as logger;
+import '../../idg/idg_controller.dart';
 import '../../primitives/auto_dispose_mixin.dart';
 import '../../primitives/utils.dart';
 import '../../shared/common_widgets.dart';
@@ -1002,6 +1003,12 @@ class HeapTreeViewState extends State<HeapTree>
     }
 
     _controller.memoryTimeline.addSnapshotEvent(auto: !userGenerated);
+
+    if (userGenerated) {
+      final IDGController idgController = globals[IDGController];
+      idgController.log(
+          LogData('mem-snapshot', '', DateTime.now().millisecondsSinceEpoch));
+    }
 
     setState(() {
       snapshotState = SnapshotStatus.streaming;

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -27,8 +28,14 @@ import '../ui/service_extension_widgets.dart';
 import '../shared/utils.dart';
 import 'idg_controller.dart';
 import 'idg_core.dart' as idg_core;
+import 'idg_recipes.dart';
 
 final loggingSearchFieldKey = GlobalKey(debugLabel: 'LoggingSearchFieldKey');
+
+final idgRecipes = {
+  'Find a memory leak': oomCaseStudyRecipe,
+  // 'Minimal Recipe': minimalRecipe,
+};
 
 class IDGScreen extends StatefulWidget {
   const IDGScreen({
@@ -252,6 +259,15 @@ class _IDGScreenBodyState extends State<IDGScreenBody>
                   ),
                 ),
               ]),
+              if (s.imageUrl != null)
+                Row(children: [
+                  Flexible(
+                    child: Image.file(
+                      File(s.imageUrl!),
+                      fit: BoxFit.scaleDown,
+                    ),
+                  ),
+                ]),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
@@ -284,9 +300,8 @@ class _IDGScreenBodyState extends State<IDGScreenBody>
     );
   }
 
-  var _runAnApp = "Run an App"; // TODO: Extract to the encoding of a list
   Widget _idgSelector() => DropdownButton<String>(
-        items: <String>[_runAnApp, 'Find a memory leak'].map(
+        items: idgRecipes.keys.map(
           (String value) {
             return DropdownMenuItem<String>(
               value: value,
@@ -294,8 +309,9 @@ class _IDGScreenBodyState extends State<IDGScreenBody>
             );
           },
         ).toList(),
-        value: _runAnApp,
-        onChanged: (_) {
+        value: idgRecipes.keys.first,
+        onChanged: (newValue) {
+          idgController.idgEngine.selectedRecipe = newValue!;
           idgController.idgEngine.reset();
         }, // TODO: jump to IDG selector
       );

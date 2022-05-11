@@ -32,6 +32,7 @@ class Step {
   Step({
     this.title,
     this.text,
+    this.imageUrl,
     this.nextStepGuard,
     this.isTitleButton = false,
     this.buttons = const <Action>[],
@@ -40,6 +41,7 @@ class Step {
   String? title;
   late bool isTitleButton;
   String? text;
+  String? imageUrl;
   Sensor? nextStepGuard;
   // Action action;
   bool get isDone => nextStepGuard!.isDone;
@@ -227,21 +229,27 @@ class IDGEvent {
 
 class IDGEngine {
   final Set<Sensor> _senorsEventsToWatch = <Sensor>{};
-  final Set<Recipe> _recipesToWatch = <Recipe>{};
+  final Map<String, Recipe> _recipesToWatch = <String, Recipe>{};
+  String? selectedRecipe;
 
   final StreamController<bool> updatesController = StreamController.broadcast();
 
   Recipe getRecipe() {
-    assert(_recipesToWatch.length == 1);
-    return _recipesToWatch.first;
+    return _recipesToWatch[selectedRecipe]!;
   }
   // List<IDGEvent> events = [];
 
-  void addRecipes(Recipe r) {
+  void addRecipes(String name, Recipe r) {
     print("IDG addRecipes $r");
-    _recipesToWatch.add(r);
+    _recipesToWatch[name] = r;
+    selectedRecipe ??= name;
     print("IDG addRecipes - adding sensors ${r.allSensors}");
     _senorsEventsToWatch.addAll(r.allSensors);
+  }
+
+  void selectRecipe(String name) {
+    assert(_recipesToWatch.keys.contains(name));
+    selectedRecipe = name;
   }
 
   void notifyOfEvent(IDGEvent event) {
@@ -259,13 +267,13 @@ class IDGEngine {
       }
     }
     // DEBUG
-    if (!sensorSeen)
-      print(
-          "IDG: No sensor found for : ${event.eventName} : ${event.eventData}");
+    // if (!sensorSeen)
+    //   print(
+    //       "IDG: No sensor found for : ${event.eventName} : ${event.eventData}");
   }
 
   void _updateActiveSteps() {
-    for (var r in _recipesToWatch) {
+    for (var r in _recipesToWatch.values) {
       bool seenInactiveStep = false;
       for (var step in r.steps) {
         if (!step.isDone && !seenInactiveStep) {
@@ -280,6 +288,8 @@ class IDGEngine {
   }
 
   void reset() {
-    _recipesToWatch.first.reset();
+    for (var recipe in _recipesToWatch.values) {
+      recipe.reset();
+    }
   }
 }

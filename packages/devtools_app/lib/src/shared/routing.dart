@@ -7,6 +7,7 @@ import 'dart:collection';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../idg/idg_controller.dart';
 import '../primitives/utils.dart';
 import 'globals.dart';
 
@@ -145,6 +146,10 @@ class DevToolsRouterDelegate extends RouterDelegate<DevToolsRouteConfiguration>
     if (!pageChanged && !argsChanged) {
       return;
     }
+
+    final IDGController idgController = globals[IDGController];
+    idgController.log(LogData('DevToolsRouter.navigateTo.$page', '',
+        DateTime.now().millisecondsSinceEpoch));
 
     navigate(page, argUpdates);
   }

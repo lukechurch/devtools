@@ -238,6 +238,7 @@ class MemoryController extends DisposableController
   MemoryController() {
     memoryTimeline = MemoryTimeline(this);
     memoryLog = MemoryLog(this);
+    setGlobal(MemoryController, this);
   }
 
   static const logFilenamePrefix = 'memory_log_';

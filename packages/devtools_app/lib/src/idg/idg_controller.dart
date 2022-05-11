@@ -170,8 +170,10 @@ class IDGController extends DisposableController
         FilterControllerMixin<LogData>,
         AutoDisposeControllerMixin {
   IDGController() {
-    idgEngine = new IDGEngine();
-    idgEngine.addRecipes(minimalRecipe);
+    idgEngine = IDGEngine();
+    for (var recipe in idgRecipes.keys) {
+      idgEngine.addRecipes(recipe, idgRecipes[recipe]!);
+    }
 
     autoDisposeStreamSubscription(
         serviceManager.onConnectionAvailable.listen(_handleConnectionStart));

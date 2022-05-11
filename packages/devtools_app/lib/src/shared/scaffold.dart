@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:developer' as dev;
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -12,6 +13,7 @@ import '../app.dart';
 import '../config_specific/drag_and_drop/drag_and_drop.dart';
 import '../config_specific/ide_theme/ide_theme.dart';
 import '../config_specific/import_export/import_export.dart';
+import '../idg/idg_controller.dart';
 import '../primitives/auto_dispose_mixin.dart';
 import '../screens/debugger/console.dart';
 import '../screens/debugger/debugger_screen.dart';
@@ -253,6 +255,9 @@ class DevToolsScaffoldState extends State<DevToolsScaffold>
 
     if (newIndex != -1 && newIndex != existingTabIndex) {
       DevToolsRouterDelegate.of(context).navigateIfNotCurrent(pageId);
+      final IDGController idgController = globals[IDGController];
+      idgController.log(LogData('DevToolsRouter.navigateTo.$pageId', '',
+          DateTime.now().millisecondsSinceEpoch));
     }
   }
 
