@@ -604,7 +604,7 @@ class HeapTreeViewState extends State<HeapTree>
             icon: Icons.camera,
             label: 'Take Heap Snapshot',
             onPressed: _isSnapshotRunning ? null : _takeHeapSnapshot,
-            color: isSnapshotButtonHighlighted ? Colors.blue : Colors.white,
+            color: isSnapshotButtonHighlighted ? Colors.red : Colors.white,
           ),
           const SizedBox(width: defaultSpacing),
           Row(
