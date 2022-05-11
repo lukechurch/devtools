@@ -164,7 +164,8 @@ var oom1 = idg_core.Step(
       Click on the leaky Image Viewer app (the image) and drag down for a few
       images to load.''',
   imageUrl:
-      '/Users/lukechurch/GitRepos/devtools_copy/case_study/memory_leaks/images_1_null_safe/readme_images/memory_startup.png',
+      '/Users/lukechurch/GitRepos/devtools_copy/case_study/memory_leaks/images_1_null_safe/readme_images/ImageScroll.gif',
+  imageMaxHeight: 300,
   nextStepGuard: idg_core.MaskUntil(
     () => oom0.isDone,
     idg_core.PresenceSensor('image-loaded', 'a few images have loaded'),

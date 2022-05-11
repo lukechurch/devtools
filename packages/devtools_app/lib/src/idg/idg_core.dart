@@ -33,6 +33,7 @@ class Step {
     this.title,
     this.text,
     this.imageUrl,
+    this.imageMaxHeight,
     this.nextStepGuard,
     this.isTitleButton = false,
     this.buttons = const <Action>[],
@@ -42,6 +43,7 @@ class Step {
   late bool isTitleButton;
   String? text;
   String? imageUrl;
+  double? imageMaxHeight;
   Sensor? nextStepGuard;
   // Action action;
   bool get isDone => nextStepGuard!.isDone;

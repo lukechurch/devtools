@@ -262,9 +262,17 @@ class _IDGScreenBodyState extends State<IDGScreenBody>
               if (s.imageUrl != null)
                 Row(children: [
                   Flexible(
-                    child: Image.file(
-                      File(s.imageUrl!),
-                      fit: BoxFit.scaleDown,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      constraints: (s.imageMaxHeight != null)
+                          ? BoxConstraints(
+                              maxHeight: s.imageMaxHeight!,
+                            )
+                          : const BoxConstraints(),
+                      child: Image.file(
+                        File(s.imageUrl!),
+                        fit: BoxFit.scaleDown,
+                      ),
                     ),
                   ),
                 ]),
