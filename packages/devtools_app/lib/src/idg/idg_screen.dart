@@ -176,6 +176,8 @@ class _IDGScreenBodyState extends State<IDGScreenBody>
 
   late List<LogData> filteredLogs;
 
+  Set<idg_core.Step> manualOpened = {};
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<bool>(
@@ -244,10 +246,20 @@ class _IDGScreenBodyState extends State<IDGScreenBody>
                     ]);
               },
               body: _buildIdgStep(s),
-              isExpanded: s.isActive,
+              isExpanded: manualOpened.contains(s) || s.isActive,
               canTapOnHeader: true,
             );
           }).toList(),
+          expansionCallback: (int i, bool expanded) {
+            setState(() {
+              print("callback: $i $expanded");
+              final idg_core.Step s = r.steps[i];
+              if (manualOpened.contains(s))
+                manualOpened.remove(s);
+              else
+                manualOpened.add(s);
+            });
+          },
         )
       ],
     );
