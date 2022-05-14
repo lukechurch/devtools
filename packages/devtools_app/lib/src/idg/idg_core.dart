@@ -1,31 +1,30 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:vm_service/vm_service.dart';
-
 class Recipe {
   Recipe(this.steps);
 
   List<Step> steps;
 
   Set<Sensor> get allSensors {
-    final Set<Sensor> sensors = Set<Sensor>();
+    final Set<Sensor> sensors = <Sensor>{};
     for (var step in steps) {
       sensors.add(step.nextStepGuard!);
     }
     return sensors;
   }
 
-  void reset() => steps.forEach((element) {
-        element.reset();
-      });
+  void reset() {
+    for (var element in steps) {
+      element.reset();
+    }
+  }
 }
 
 class Action {
+  Action(this.name, this.onClick);
   String name;
   Future Function() onClick;
-
-  Action(this.name, this.onClick);
 }
 
 class Step {
@@ -67,11 +66,11 @@ abstract class Sensor {
 }
 
 class PerfSensor extends Sensor {
-  int elapsedMsThreshold;
   PerfSensor(sensorName, presentationName, this.elapsedMsThreshold)
       : super(sensorName, presentationName) {
     reset();
   }
+  int elapsedMsThreshold;
 
   late bool triggered;
   late int elapsedMilliseconds;
@@ -79,11 +78,11 @@ class PerfSensor extends Sensor {
   @override
   void trigger(IDGEvent e) {
     print(e.eventData);
-    int elapsedMs =
-        json.decode(e.eventData)["extensionData"]["elapsedMilliseconds"];
+    final int elapsedMs =
+        json.decode(e.eventData)['extensionData']['elapsedMilliseconds'];
 
     triggered = elapsedMs < elapsedMsThreshold;
-    if (triggered) this.elapsedMilliseconds = elapsedMs;
+    if (triggered) elapsedMilliseconds = elapsedMs;
   }
 
   @override
@@ -125,19 +124,18 @@ class PresenceSensor extends Sensor {
 }
 
 class FileChangeSensor extends Sensor {
-  String filePath;
-
   FileChangeSensor(sensorName, presentationName, this.filePath)
       : super(sensorName, presentationName) {
     reset();
   }
+  String filePath;
 
   late bool triggered;
 
   @override
   void trigger(IDGEvent e) {
     // idg?arg=IDG report: [4:44:28 AM] onDidChangeTextDocument /Users/lukechurch/GitRepos/LCC/idg_sample_apps/image_list/lib/main.dart
-    if (e.eventData.contains("onDidChangeTextDocument") &&
+    if (e.eventData.contains('onDidChangeTextDocument') &&
         e.eventData.contains(filePath)) triggered = true;
   }
 
@@ -154,11 +152,10 @@ class FileChangeSensor extends Sensor {
 }
 
 class CondAnd extends Sensor {
+  CondAnd(this.cond, this.sensor)
+      : super(sensor.sensorName, sensor.presentationName);
   Sensor sensor;
   bool Function() cond;
-
-  CondAnd(bool Function() this.cond, this.sensor)
-      : super(sensor.sensorName, sensor.presentationName);
 
   @override
   String valueString() => sensor.valueString();
@@ -176,11 +173,10 @@ class CondAnd extends Sensor {
 }
 
 class MaskUntil extends Sensor {
+  MaskUntil(this.cond, this.sensor)
+      : super(sensor.sensorName, sensor.presentationName);
   Sensor sensor;
   bool Function() cond;
-
-  MaskUntil(bool Function() this.cond, this.sensor)
-      : super(sensor.sensorName, sensor.presentationName);
 
   @override
   String valueString() => sensor.valueString();
@@ -242,10 +238,10 @@ class IDGEngine {
   // List<IDGEvent> events = [];
 
   void addRecipes(String name, Recipe r) {
-    print("IDG addRecipes $r");
+    print('IDG addRecipes $r');
     _recipesToWatch[name] = r;
     selectedRecipe ??= name;
-    print("IDG addRecipes - adding sensors ${r.allSensors}");
+    print('IDG addRecipes - adding sensors ${r.allSensors}');
     _senorsEventsToWatch.addAll(r.allSensors);
   }
 
@@ -264,16 +260,17 @@ class IDGEngine {
       // print(
       //     "Sensor Name for test: ${event.eventName} == ${sensor.sensorName}, match: ${sensor.sensorName == event.eventName}");
       if (sensor.sensorName == event.eventName) {
-        print("IDG: Triggering sensor: ${sensor.sensorName}");
+        print('IDG: Triggering sensor: ${sensor.sensorName}');
         sensor.trigger(event);
         _updateActiveSteps();
         sensorSeen = true;
       }
     }
     // DEBUG
-    // if (!sensorSeen)
-    //   print(
-    //       "IDG: No sensor found for : ${event.eventName} : ${event.eventData}");
+    if (!sensorSeen)
+      print(
+        'IDG: No sensor found for : ${event.eventName} : ${event.eventData}',
+      );
   }
 
   void _updateActiveSteps() {
