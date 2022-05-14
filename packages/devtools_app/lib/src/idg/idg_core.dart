@@ -252,6 +252,8 @@ class IDGEngine {
   void selectRecipe(String name) {
     assert(_recipesToWatch.keys.contains(name));
     selectedRecipe = name;
+    reset();
+    updatesController.add(true);
   }
 
   void notifyOfEvent(IDGEvent event) {

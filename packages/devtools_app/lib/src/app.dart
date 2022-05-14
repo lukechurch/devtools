@@ -319,16 +319,23 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
         theme: Theme.of(context),
       ),
       builder: (context, child) => Provider<AnalyticsController>.value(
-          value: widget.analyticsController,
-          child: Notifications(
-            child: ReleaseNotesViewer(
-              releaseNotesController: releaseNotesController,
-              child: IDGScreen(
-                idgController: idgController,
-                child: child!,
-              ),
+        value: widget.analyticsController,
+        child: Notifications(
+          child: ReleaseNotesViewer(
+            releaseNotesController: releaseNotesController,
+            child: Navigator(
+              onGenerateInitialRoutes: (NavigatorState _, String __) => <Route>[
+                MaterialPageRoute(
+                  builder: (_) => IDGScreen(
+                    idgController: idgController,
+                    child: child!,
+                  ),
+                )
+              ],
             ),
-          )),
+          ),
+        ),
+      ),
       routerDelegate: DevToolsRouterDelegate(_getPage),
       routeInformationParser: DevToolsRouteInformationParser(),
       // Disable default scrollbar behavior on web to fix duplicate scrollbars

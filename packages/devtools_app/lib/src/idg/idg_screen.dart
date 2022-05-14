@@ -34,7 +34,7 @@ final loggingSearchFieldKey = GlobalKey(debugLabel: 'LoggingSearchFieldKey');
 
 final idgRecipes = {
   'Find a memory leak': oomCaseStudyRecipe,
-  // 'Minimal Recipe': minimalRecipe,
+  'Minimal Recipe': minimalRecipe,
 };
 
 class IDGScreen extends StatefulWidget {
@@ -333,20 +333,25 @@ class _IDGScreenBodyState extends State<IDGScreenBody>
     );
   }
 
-  Widget _idgSelector() => DropdownButton<String>(
-        items: idgRecipes.keys.map(
-          (String value) {
-            return DropdownMenuItem<String>(
-              value: value,
-              child: Text(value),
-            );
+  Widget _idgSelector() => Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: DropdownButton<String>(
+          items: idgRecipes.keys.map(
+            (String value) {
+              return DropdownMenuItem<String>(
+                value: value,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 12),
+                  child: Text(value),
+                ),
+              );
+            },
+          ).toList(),
+          value: idgController.idgEngine.selectedRecipe,
+          onChanged: (newValue) {
+            idgController.idgEngine.selectRecipe(newValue!);
           },
-        ).toList(),
-        value: idgRecipes.keys.first,
-        onChanged: (newValue) {
-          idgController.idgEngine.selectedRecipe = newValue!;
-          idgController.idgEngine.reset();
-        }, // TODO: jump to IDG selector
+        ),
       );
   // void _showFilterDialog() {
   //   showDialog(
