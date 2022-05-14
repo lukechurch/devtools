@@ -18,7 +18,8 @@ final loggingSearchFieldKey = GlobalKey(debugLabel: 'LoggingSearchFieldKey');
 
 final idgRecipes = {
   'Find a memory leak': oomCaseStudyRecipe,
-  'Minimal Recipe': minimalRecipe,
+  'Report an issue': openGithubIssueRecipe,
+  // 'Minimal Recipe': minimalRecipe,
 };
 
 class IDGScreen extends StatefulWidget {
