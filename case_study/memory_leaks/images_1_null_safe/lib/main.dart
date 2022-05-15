@@ -5,6 +5,8 @@
 import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 
+import 'idg_instrument.dart' as idg;
+
 void main() {
   runApp(const MyApp());
 }
@@ -94,6 +96,8 @@ class MyHomePageState extends State<MyHomePage>
     final loadingState = cumulativeBytes == expectedTotalBytes
         ? 'Loaded.'
         : 'Still Loading, $cumulativeBytes of $expectedTotalBytes bytes.';
+
+    idg.reportEvent(idg.IDGEvent("image-loaded", {"image": imageUrl}));
 
     developer.log('$loadingState, $imageUrl');
 

@@ -32,17 +32,19 @@ Press the Snapshot button to collect information about all objects in the Dart V
 
 <img src="readme_images/snapshot.png" />
 
-When complete a Heat Map will appear.  Turn off the Heat Map swtich:
-
-<img src="readme_images/heatmap_off.png" />
+# (the heatmap is no longer the default, the table view is, so no need to switch)
+# When complete a Heat Map will appear.  Turn off the Heat Map swtich:
+# 
+# <img src="readme_images/heatmap_off.png" /> 
 
 When the Heat Map is switched off a table view is displayed of all objects in the Dart VM heap.
 
 <img src="readme_images/table_first.png" />
 
-Press the Analyze button to analyze the current Snapshot
-
-<img src="readme_images/analyze.png" />
+# (the Analyze button is no longer available - the analysis tree map is created by default)
+# Press the Analyze button to analyze the current Snapshot
+#
+# <img src="readme_images/analyze.png" />
 
 After the snashot analysis a child row inside of > Analysis will be added titled "Snapshot ..." with the timetime stamp of the snapshot e.g., "Snapshot Jun 09 12:23:44".
 
@@ -51,26 +53,26 @@ After the snashot analysis a child row inside of > Analysis will be added titled
 The analysis collects the raw memory objects that contain the images, any classes concerning images in Flutter under the
 
 ```
->Snapshot Jun 09 12:27:25
+> Analyzed Jun 09 12:27:25
   > Externals
 ```
 
 Expand Externals
 
 ```
-> Snapshot MMM DD HH:MM:SS
+> Analyzed Jun 09 12:27:25
    > Externals
-     > _Int32List
+     > _Image
        > Buckets
 ```
        
-You'll notice a number of chunks of _Int32List memory is displayed into their corresponding bucket sizes.  The images are in the 1M..10M and 50M+ buckets.  Eleven images total ~284M.
+You'll notice a number of chunks of _Image memory is displayed into their corresponding bucket sizes.  The images are in the 1M..10M, and 50M+ buckets.  Eleven images total ~284M.
 
 The next interesting piece of information is to expand:
 
 ```
-> Snapshot MMM DD HH:MM:SS
-     > Library filters
+> Analyzed Jun 09 12:27:25
+   > Library filters
        > ImageCache
 ```
 
