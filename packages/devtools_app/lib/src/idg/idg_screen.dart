@@ -358,6 +358,7 @@ class _IDGScreenBodyState extends State<IDGScreenBody>
           ).toList(),
           value: idgController.idgEngine.selectedRecipe,
           onChanged: (newValue) {
+            if (idgController.idgEngine.selectedRecipe == newValue) return;
             idgController.idgEngine.selectRecipe(newValue!);
           },
         ),
