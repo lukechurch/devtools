@@ -122,7 +122,7 @@ class IDGBody extends AnimatedWidget {
             AreaPaneHeader(
               title: const Text('IDG'),
               needsTopBorder: false,
-              rightActions: [
+              actions: [
                 IconButton(
                   padding: const EdgeInsets.all(0.0),
                   onPressed: () => idgController.toggleIDGVisible(false),

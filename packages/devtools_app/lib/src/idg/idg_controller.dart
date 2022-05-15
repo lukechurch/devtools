@@ -492,6 +492,7 @@ class _StdoutEventHandler {
 
   void handle(Event e) {
     final String message = decodeBase64(e.bytes!);
+    print('_StdOutEventHandler: $message');
 
     if (buffer != null) {
       timer?.cancel();
