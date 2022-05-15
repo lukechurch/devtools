@@ -4,6 +4,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../../analytics/analytics.dart' as ga;
 import '../../analytics/constants.dart' as analytics_constants;
 import '../../charts/flame_chart.dart';
 import '../../primitives/auto_dispose_mixin.dart';
@@ -78,21 +79,27 @@ class _TabbedPerformanceViewState extends State<TabbedPerformanceView>
     );
 
     final tabViews = [
-      TimelineEventsView(
-        controller: controller,
-        processing: widget.processing,
-        processingProgress: widget.processingProgress,
+      KeepAliveWrapper(
+        child: TimelineEventsView(
+          controller: controller,
+          processing: widget.processing,
+          processingProgress: widget.processingProgress,
+        ),
       ),
-      if (frameAnalysisSupported) frameAnalysisView,
-      if (rasterMetricsSupported) rasterMetrics,
+      if (frameAnalysisSupported)
+        KeepAliveWrapper(
+          child: frameAnalysisView,
+        ),
+      if (rasterMetricsSupported)
+        KeepAliveWrapper(
+          child: rasterMetrics,
+        ),
     ];
 
     return AnalyticsTabbedView(
       tabs: _generateTabs(),
       tabViews: tabViews,
       gaScreen: analytics_constants.performance,
-      // TODO(kenz): enable analytics when this view is stable.
-      sendAnalytics: false,
     );
   }
 
@@ -132,8 +139,13 @@ class _TabbedPerformanceViewState extends State<TabbedPerformanceView>
                 icon: Icons.camera,
                 label: 'Take Snapshot',
                 outlined: false,
-                onPressed:
-                    controller.rasterMetricsController.collectRasterStats,
+                onPressed: () {
+                  ga.select(
+                    PerformanceScreen.id,
+                    analytics_constants.collectRasterStats,
+                  );
+                  controller.rasterMetricsController.collectRasterStats();
+                },
               ),
               const SizedBox(width: denseSpacing),
               ClearButton(

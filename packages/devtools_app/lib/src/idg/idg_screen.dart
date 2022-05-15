@@ -130,7 +130,7 @@ class IDGBody extends AnimatedWidget {
             AreaPaneHeader(
               title: const Text('IDG'),
               needsTopBorder: false,
-              rightActions: [
+              actions: [
                 IconButton(
                   padding: const EdgeInsets.all(0.0),
                   onPressed: () => idgController.toggleIDGVisible(false),
@@ -384,13 +384,13 @@ class _LogDetailsState extends State<LogDetails>
   }
 
   Future<void> _computeLogDetails() async {
-    if (widget.log?.needsComputing ?? false) {
+    if (widget.log.needsComputing) {
       await widget.log.compute();
       setState(() {});
     }
   }
 
-  bool showSimple(LogData log) => log != null && !log.needsComputing;
+  bool showSimple(LogData log) => !log.needsComputing;
 
   @override
   Widget build(BuildContext context) {
@@ -411,7 +411,7 @@ class _LogDetailsState extends State<LogDetails>
   }
 
   Widget _buildSimpleLog(BuildContext context, LogData log) {
-    final disabled = log?.details == null || log.details!.isEmpty;
+    final disabled = log.details == null || log.details!.isEmpty;
 
     final details = log.details!;
     if (details != _lastDetails) {
@@ -427,9 +427,9 @@ class _LogDetailsState extends State<LogDetails>
         title: AreaPaneHeader(
           title: const Text('Details'),
           needsTopBorder: false,
-          rightActions: [
+          actions: [
             CopyToClipboardControl(
-              dataProvider: disabled ? null : () => log?.prettyPrinted,
+              dataProvider: disabled ? null : () => log.prettyPrinted,
               buttonKey: LogDetails.copyToClipboardButtonKey,
             ),
           ],
@@ -439,7 +439,7 @@ class _LogDetailsState extends State<LogDetails>
           child: SingleChildScrollView(
             controller: scrollController,
             child: SelectableText(
-              log?.prettyPrinted ?? '',
+              log.prettyPrinted,
               textAlign: TextAlign.left,
               style: Theme.of(context).fixedFontStyle,
             ),
@@ -529,8 +529,7 @@ class MessageColumn extends ColumnData<LogData>
   bool get supportsSorting => false;
 
   @override
-  String getValue(LogData dataObject) =>
-      dataObject.summary! ?? dataObject.details!;
+  String getValue(LogData dataObject) => dataObject.summary!;
 
   @override
   int compare(LogData a, LogData b) {

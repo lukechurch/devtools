@@ -62,7 +62,7 @@ Future<String?> _retrieveFullStringValue(
     onUnavailable: (truncatedValue) => fallback,
   );
 
-  return ret ?? Future.value(fallback);
+  return ret;
 }
 
 class IDGDetailsController {
@@ -662,7 +662,7 @@ class IDGController extends DisposableController
 
   @override
   void filterData(Filter<LogData> filter) {
-    if (filter?.queryFilter == null) {
+    if (filter.queryFilter == null) {
       filteredData
         ..clear()
         ..addAll(data);
@@ -731,11 +731,11 @@ class _StdoutEventHandler {
   late Timer timer;
 
   void handle(Event e) {
-    final String message = decodeBase64(e!.bytes!);
+    final String message = decodeBase64(e.bytes!);
     print('_StdOutEventHandler: $message');
 
     if (buffer != null) {
-      timer?.cancel();
+      timer.cancel();
 
       if (message == '\n') {
         loggingController.log(LogData(
@@ -780,14 +780,10 @@ class _StdoutEventHandler {
 }
 
 bool _isNotNull(InstanceRef serviceRef) {
-  return serviceRef != null && serviceRef.kind != 'Null';
+  return serviceRef.kind != 'Null';
 }
 
 String? _valueAsString(InstanceRef ref) {
-  if (ref == null) {
-    return null;
-  }
-
   if (ref.valueAsString == null) {
     return ref.valueAsString;
   }
@@ -834,7 +830,7 @@ class LogData with DataSearchStateMixin {
   bool get needsComputing => detailsComputer != null;
 
   Future<void> compute() async {
-    _details = (await detailsComputer!())!;
+    _details = await detailsComputer!();
     detailsComputer = null;
   }
 
@@ -935,8 +931,8 @@ class ImageSizesForFrame {
   String get summary {
     final file = path.basename(source);
 
-    final int displaySizeInBytes = rawJson['displaySizeInBytes'] as int;
-    final int decodedSizeInBytes = rawJson['decodedSizeInBytes'] as int;
+    final int? displaySizeInBytes = rawJson['displaySizeInBytes'] as int;
+    final int? decodedSizeInBytes = rawJson['decodedSizeInBytes'] as int;
 
     final double expansion =
         math.sqrt(decodedSizeInBytes ?? 0) / math.sqrt(displaySizeInBytes ?? 1);

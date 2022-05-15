@@ -2,20 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// @dart=2.9
-
 import 'dart:async';
 
-import 'package:devtools_app/devtools_app.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../devtools.dart' as devtools;
 import 'analytics/analytics.dart' as ga;
 import 'analytics/analytics_controller.dart';
 import 'analytics/constants.dart' as analytics_constants;
-import 'config_specific/launch_url/launch_url.dart';
 import 'config_specific/server/server.dart';
 import 'example/conditional_screen.dart';
 import 'framework/framework_core.dart';
@@ -39,6 +34,7 @@ import 'screens/profiler/profiler_screen_controller.dart';
 import 'screens/provider/provider_screen.dart';
 import 'screens/vm_developer/vm_developer_tools_controller.dart';
 import 'screens/vm_developer/vm_developer_tools_screen.dart';
+import 'shared/about_dialog.dart';
 import 'shared/common_widgets.dart';
 import 'shared/dialogs.dart';
 import 'shared/globals.dart';
@@ -46,6 +42,7 @@ import 'shared/initializer.dart';
 import 'shared/landing_screen.dart';
 import 'shared/notifications.dart';
 import 'shared/release_notes/release_notes.dart';
+import 'shared/report_feedback_button.dart';
 import 'shared/routing.dart';
 import 'shared/scaffold.dart';
 import 'shared/screen.dart';
@@ -53,6 +50,7 @@ import 'shared/snapshot_screen.dart';
 import 'shared/theme.dart';
 import 'idg/idg_controller.dart';
 import 'idg/idg_screen.dart';
+import 'ui/icons.dart';
 import 'ui/service_extension_widgets.dart';
 
 // Assign to true to use a sample implementation of a conditional screen.
@@ -99,7 +97,7 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
   bool _denseModeEnabled = false;
 
   late ReleaseNotesController releaseNotesController;
-  IDGController idgController;
+  late IDGController idgController;
 
   @override
   void initState() {
@@ -319,17 +317,20 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
         ideTheme: ideTheme,
         theme: Theme.of(context),
       ),
-      builder: (context, child) => Provider<AnalyticsController>.value(
+      builder: (context, child) {
+        return Provider<AnalyticsController>.value(
           value: widget.analyticsController,
           child: Notifications(
             child: ReleaseNotesViewer(
               releaseNotesController: releaseNotesController,
               child: IDGScreen(
                 idgController: idgController,
-                child: child,
+                child: child!,
               ),
             ),
-          )),
+          ),
+        );
+      },
       routerDelegate: DevToolsRouterDelegate(_getPage),
       routeInformationParser: DevToolsRouteInformationParser(),
       // Disable default scrollbar behavior on web to fix duplicate scrollbars
@@ -428,34 +429,6 @@ class _AlternateCheckedModeBanner extends StatelessWidget {
   }
 }
 
-class OpenAboutAction extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return DevToolsTooltip(
-      message: 'About DevTools',
-      child: InkWell(
-        onTap: () async {
-          unawaited(
-            showDialog(
-              context: context,
-              builder: (context) => DevToolsAboutDialog(),
-            ),
-          );
-        },
-        child: Container(
-          width: DevToolsScaffold.actionWidgetSize,
-          height: DevToolsScaffold.actionWidgetSize,
-          alignment: Alignment.center,
-          child: Icon(
-            Icons.help_outline,
-            size: actionsIconSize,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class OpenSettingsAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -485,8 +458,9 @@ class OpenSettingsAction extends StatelessWidget {
 }
 
 class OpenIDGAction extends StatelessWidget {
-  OpenIDGAction({Key key, this.idgController}) : super(key: key);
-  IDGController idgController;
+  const OpenIDGAction({Key? key, required this.idgController})
+      : super(key: key);
+  final IDGController idgController;
 
   @override
   Widget build(BuildContext context) {
@@ -507,84 +481,6 @@ class OpenIDGAction extends StatelessWidget {
             size: actionsIconSize,
           ),
         ),
-      ),
-    );
-  }
-}
-
-class ReportFeedbackButton extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return DevToolsTooltip(
-      message: 'Report feedback',
-      child: InkWell(
-        onTap: () async {
-          ga.select(
-            analytics_constants.devToolsMain,
-            analytics_constants.feedbackButton,
-          );
-          await launchUrl(
-            devToolsExtensionPoints.issueTrackerLink().url,
-            context,
-          );
-        },
-        child: Container(
-          width: DevToolsScaffold.actionWidgetSize,
-          height: DevToolsScaffold.actionWidgetSize,
-          alignment: Alignment.center,
-          child: Icon(
-            Icons.bug_report,
-            size: actionsIconSize,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class DevToolsAboutDialog extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return DevToolsDialog(
-      title: dialogTitleText(theme, 'About DevTools'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _aboutDevTools(context),
-          const SizedBox(height: defaultSpacing),
-          ...dialogSubHeader(theme, 'Feedback'),
-          Wrap(
-            children: [
-              const Text('Encountered an issue? Let us know at '),
-              _createFeedbackLink(context),
-              const Text('.')
-            ],
-          ),
-        ],
-      ),
-      actions: [
-        DialogCloseButton(),
-      ],
-    );
-  }
-
-  Widget _aboutDevTools(BuildContext context) {
-    return const SelectableText('DevTools version ${devtools.version}');
-  }
-
-  Widget _createFeedbackLink(BuildContext context) {
-    return RichText(
-      text: LinkTextSpan(
-        link: devToolsExtensionPoints.issueTrackerLink(),
-        context: context,
-        onTap: () {
-          ga.select(
-            analytics_constants.devToolsMain,
-            analytics_constants.feedbackLink,
-          );
-        },
       ),
     );
   }
@@ -673,9 +569,9 @@ class CheckboxSetting extends StatelessWidget {
   void toggleSetting(bool? newValue) {
     ga.select(
       analytics_constants.settingsDialog,
-      '$gaItem-${newValue ? 'enabled' : 'disabled'}',
+      '$gaItem-${newValue == true ? 'enabled' : 'disabled'}',
     );
-    toggle(newValue);
+    toggle(newValue == true);
   }
 }
 
