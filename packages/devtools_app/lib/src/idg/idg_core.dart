@@ -53,7 +53,11 @@ class Step {
   bool isActive = false;
   List<Action> buttons;
 
-  void reset() => nextStepGuard!.reset();
+  void reset() {
+    nextStepGuard!.reset();
+    isActive = false;
+    inputFieldData = null;
+  }
 }
 
 abstract class Sensor {
@@ -176,6 +180,27 @@ class CondAnd extends Sensor {
   }
 }
 
+class CondOr extends Sensor {
+  CondOr(this.cond, this.sensor)
+      : super(sensor.sensorName, sensor.presentationName);
+  Sensor sensor;
+  bool Function() cond;
+
+  @override
+  String valueString() => sensor.valueString();
+
+  @override
+  bool get isDone => cond() || sensor.isDone;
+
+  @override
+  void trigger(IDGEvent e) => sensor.trigger(e);
+
+  @override
+  void reset() {
+    sensor.reset();
+  }
+}
+
 class MaskUntil extends Sensor {
   MaskUntil(this.cond, this.sensor)
       : super(sensor.sensorName, sensor.presentationName);
@@ -270,11 +295,11 @@ class IDGEngine {
         sensorSeen = true;
       }
     }
-    // DEBUG
-    if (!sensorSeen)
-      print(
-        'IDG: No sensor found for : ${event.eventName} : ${event.eventData}',
-      );
+    // DEBUG - noisy
+    // if (!sensorSeen) {
+    //   print(
+    //       'IDG: No sensor found for : ${event.eventName} : ${event.eventData}');
+    // }
   }
 
   void _updateActiveSteps() {
@@ -296,5 +321,6 @@ class IDGEngine {
     for (var recipe in _recipesToWatch.values) {
       recipe.reset();
     }
+    _updateActiveSteps();
   }
 }

@@ -28,6 +28,8 @@ class DevToolsRouteConfiguration {
   final Map<String, String?> args;
 }
 
+String? selectedPage;
+
 /// Converts between structured [DevToolsRouteConfiguration] (our internal data
 /// for pages/routing) and [RouteInformation] (generic data that can be persisted
 /// in the address bar/state objects).
@@ -151,6 +153,7 @@ class DevToolsRouterDelegate extends RouterDelegate<DevToolsRouteConfiguration>
     idgController.log(LogData('DevToolsRouter.navigateTo.$page', '',
         DateTime.now().millisecondsSinceEpoch));
 
+    selectedPage = page;
     navigate(page, argUpdates);
   }
 

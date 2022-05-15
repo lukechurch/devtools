@@ -13,9 +13,12 @@ var _s0 = idg_core.Step(
   text: '''
       After DevTools has connected to the running Flutter application, click on
       the Memory tab or click the button below''',
-  nextStepGuard: idg_core.PresenceSensor(
-    'DevToolsRouter.navigateTo.memory',
-    'Memory tab selected',
+  nextStepGuard: idg_core.CondOr(
+    () => devtools_app.selectedPage == devtools_app.MemoryScreen.id,
+    idg_core.PresenceSensor(
+      'DevToolsRouter.navigateTo.memory',
+      'Memory tab selected',
+    ),
   ),
   buttons: [
     idg_core.Action('go to Memory tab', () async {
