@@ -17,7 +17,8 @@ import 'idg_recipes.dart';
 final loggingSearchFieldKey = GlobalKey(debugLabel: 'LoggingSearchFieldKey');
 
 final idgRecipes = {
-  'Find a memory leak': oomCaseStudyRecipe,
+  'Find a memory leak - images case study': oomCaseStudyRecipe,
+  'Find a memory leak - general app': memoryPerfRecipe,
   'Report an issue': openGithubIssueRecipe,
   // 'Minimal Recipe': minimalRecipe,
 };
@@ -319,19 +320,26 @@ class _IDGScreenBodyState extends State<IDGScreenBody>
                   ],
                 ),
                 Row(
-                  children: s.buttons
-                      .map(
-                        (e) => Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: ElevatedButton(
-                            onPressed: () async {
-                              await e.onClick();
-                            },
-                            child: Text(e.name),
-                          ),
-                        ),
-                      )
-                      .toList(),
+                  children: [
+                    Expanded(
+                      child: Wrap(
+                        spacing: 10,
+                        children: s.buttons
+                            .map(
+                              (e) => Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: ElevatedButton(
+                                  onPressed: () async {
+                                    await e.onClick();
+                                  },
+                                  child: Text(e.name),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ),
+                  ],
                 ),
                 Row(children: const [Text('')]),
               ],
