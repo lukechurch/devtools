@@ -255,9 +255,6 @@ class DevToolsScaffoldState extends State<DevToolsScaffold>
 
     if (newIndex != -1 && newIndex != existingTabIndex) {
       DevToolsRouterDelegate.of(context).navigateIfNotCurrent(pageId);
-      final IDGController idgController = globals[IDGController];
-      idgController.log(LogData('DevToolsRouter.navigateTo.$pageId', '',
-          DateTime.now().millisecondsSinceEpoch));
     }
   }
 
