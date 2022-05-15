@@ -155,7 +155,7 @@ class _IDGScreenBodyState extends State<IDGScreenBody>
     with AutoDisposeMixin, SearchFieldMixin<IDGScreenBody> {
   _IDGScreenBodyState({required this.idgController}) : super();
 
-  late final IDGController idgController;
+  final IDGController idgController;
 
   late LogData selected;
 
@@ -262,17 +262,18 @@ class _IDGScreenBodyState extends State<IDGScreenBody>
             padding: const EdgeInsets.all(24),
             child: Column(
               children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        s.text!,
-                        softWrap: true,
-                        textAlign: TextAlign.justify,
+                if (s.text != null)
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          s.text!,
+                          softWrap: true,
+                          textAlign: TextAlign.justify,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
                 if (s.imageUrl != null)
                   Row(
                     children: [
@@ -288,6 +289,19 @@ class _IDGScreenBodyState extends State<IDGScreenBody>
                             File(s.imageUrl!),
                             fit: BoxFit.scaleDown,
                           ),
+                        ),
+                      ),
+                    ],
+                  ),
+                if (s.hasInputField)
+                  Row(
+                    children: [
+                      Flexible(
+                        child: TextField(
+                          keyboardType: TextInputType.multiline,
+                          maxLines: null,
+                          // TODO not sure this is the right way or place to store the data from the imput field
+                          onChanged: (newValue) => s.inputFieldData = newValue,
                         ),
                       ),
                     ],

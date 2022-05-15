@@ -1,5 +1,3 @@
-import '../../analytics/analytics.dart' as ga;
-import '../../analytics/constants.dart' as analytics_constants;
 import 'package:url_launcher/url_launcher.dart' as url_launcher;
 import '../../shared/globals.dart';
 import '../idg_controller.dart';
@@ -8,6 +6,7 @@ import '../idg_core.dart' as idg_core;
 var _s0 = idg_core.Step(
   title: 'Describe the problem',
   text: '',
+  hasInputField: true,
   nextStepGuard:
       idg_core.PresenceSensor('description-done', 'description done'),
   buttons: [
@@ -56,16 +55,18 @@ var _s2 = idg_core.Step(
   ),
   buttons: [
     idg_core.Action('Create GitHub issue', () async {
-      ga.select(
-        analytics_constants.devToolsMain,
-        analytics_constants.feedbackButton,
-      );
-      // await launchUrl(devToolsExtensionPoints.issueTrackerLink().url, context,);
-
-      final parsedUrl =
+      var parsedUrl =
           Uri.tryParse(devToolsExtensionPoints.issueTrackerLink().url);
 
       if (parsedUrl != null && await url_launcher.canLaunchUrl(parsedUrl)) {
+        final Map<String, String> query = Map.from(parsedUrl.queryParameters);
+        query['title'] = 'Enter a title for your issue';
+        query['labels'] = 'idg';
+        query['body'] = '''${_s0.inputFieldData ?? ''}
+
+TODO: add here data collected by _s1.''';
+
+        parsedUrl = parsedUrl.replace(queryParameters: query);
         await url_launcher.launchUrl(parsedUrl);
       } else {
         print('Unable to open $parsedUrl');

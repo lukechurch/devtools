@@ -33,16 +33,20 @@ class Step {
     this.text,
     this.imageUrl,
     this.imageMaxHeight,
+    this.hasInputField = false,
+    this.inputFieldData,
     this.nextStepGuard,
     this.isTitleButton = false,
     this.buttons = const <Action>[],
   });
 
   String? title;
-  late bool isTitleButton;
+  bool isTitleButton;
   String? text;
   String? imageUrl;
   double? imageMaxHeight;
+  bool hasInputField;
+  String? inputFieldData;
   Sensor? nextStepGuard;
   // Action action;
   bool get isDone => nextStepGuard!.isDone;
