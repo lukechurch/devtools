@@ -23,7 +23,6 @@ import '../ui/colors.dart';
 import '../ui/filter.dart';
 import '../ui/icons.dart';
 import '../ui/search.dart';
-import '../ui/service_extension_widgets.dart';
 import '../shared/utils.dart';
 import 'idg_controller.dart';
 import 'idg_core.dart' as idg_core;
