@@ -104,8 +104,8 @@ var _s3 = idg_core.Step(
           .singleWhere((element) => element.name == 'Externals');
       externalsNode.expand();
 
-      final imageNode = externalsNode.children
-          .singleWhere((element) => element.name == '_Image');
+      final imageNode =
+          externalsNode.children.singleWhere((e) => e.name == '_Image');
       imageNode.expandCascading();
 
       // Select the _Image node

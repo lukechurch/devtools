@@ -1017,7 +1017,8 @@ class HeapTreeViewState extends State<HeapTree>
     if (userGenerated) {
       final IDGController idgController = globals[IDGController];
       idgController.log(
-          LogData('mem-snapshot', '', DateTime.now().millisecondsSinceEpoch));
+        LogData('mem-snapshot', '', DateTime.now().millisecondsSinceEpoch),
+      );
     }
 
     setState(() {
