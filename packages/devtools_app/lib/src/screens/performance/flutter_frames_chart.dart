@@ -116,8 +116,7 @@ class _FlutterFramesChartState extends State<FlutterFramesChart>
 
   void selectFrame(int index) {
     print('-- $index');
-    performanceController
-        .toggleSelectedFrame(performanceController.flutterFrames.value[index]);
+    controller.toggleSelectedFrame(controller.flutterFrames.value[index]);
   }
 
   @override
@@ -158,8 +157,6 @@ class _FlutterFramesChartState extends State<FlutterFramesChart>
   void dispose() {
     _framesScrollController.dispose();
     _frameNumbersScrollController.dispose();
-    scrollController.dispose();
-    _testSubscription.cancel();
     super.dispose();
   }
 
