@@ -8,6 +8,7 @@ import 'package:devtools_app/src/config_specific/ide_theme/ide_theme.dart';
 import 'package:devtools_app/src/http/http.dart';
 import 'package:devtools_app/src/http/http_request_data.dart';
 import 'package:devtools_app/src/primitives/utils.dart';
+import 'package:devtools_app/src/screens/debugger/debugger_controller.dart';
 import 'package:devtools_app/src/screens/network/network_controller.dart';
 import 'package:devtools_app/src/screens/network/network_model.dart';
 import 'package:devtools_app/src/screens/network/network_request_inspector.dart';
@@ -16,6 +17,7 @@ import 'package:devtools_app/src/screens/network/network_screen.dart';
 import 'package:devtools_app/src/service/service_manager.dart';
 import 'package:devtools_app/src/shared/common_widgets.dart';
 import 'package:devtools_app/src/shared/globals.dart';
+import 'package:devtools_app/src/shared/notifications.dart';
 import 'package:devtools_app/src/shared/split.dart';
 import 'package:devtools_test/devtools_test.dart';
 import 'package:flutter/material.dart';
@@ -26,12 +28,14 @@ import '../test_data/network.dart';
 import 'utils/network_test_utils.dart';
 
 NetworkController controller = NetworkController();
+DebuggerController debugController = DebuggerController();
 
 Future<void> pumpNetworkScreen(WidgetTester tester) async {
   await tester.pumpWidget(
     wrapWithControllers(
       const NetworkScreenBody(),
       network: controller,
+      debugger: debugController,
     ),
   );
   final finder = find.byType(NetworkScreenBody);
@@ -55,6 +59,7 @@ void main() {
     socketProfile = loadSocketProfile();
     httpProfile = loadHttpProfile();
     setGlobal(IdeTheme, IdeTheme());
+    setGlobal(NotificationService, NotificationService());
   });
 
   group('Network Profiler', () {

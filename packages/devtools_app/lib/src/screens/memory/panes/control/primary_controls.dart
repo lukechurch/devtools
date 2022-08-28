@@ -8,68 +8,69 @@ import '../../../../analytics/analytics.dart' as ga;
 import '../../../../analytics/constants.dart' as analytics_constants;
 import '../../../../shared/common_widgets.dart';
 import '../../../../shared/theme.dart';
+import '../../../../shared/utils.dart';
 import '../../memory_controller.dart';
-import 'constants.dart';
+import '../../primitives/ui.dart';
+import '../chart/chart_pane_controller.dart';
 import 'interval_dropdown.dart';
 
 class PrimaryControls extends StatefulWidget {
   const PrimaryControls({
     Key? key,
-    required this.chartControllers,
+    required this.chartController,
   }) : super(key: key);
 
-  final ChartControllers chartControllers;
+  final MemoryChartPaneController chartController;
 
   @override
   State<PrimaryControls> createState() => _PrimaryControlsState();
 }
 
 class _PrimaryControlsState extends State<PrimaryControls>
-    with MemoryControllerMixin {
+    with ProvidedControllerMixin<MemoryController, PrimaryControls> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-
-    initMemoryController();
+    initController();
   }
 
   void _onPause() {
     ga.select(analytics_constants.memory, analytics_constants.pause);
-    memoryController.pauseLiveFeed();
+    controller.pauseLiveFeed();
   }
 
   void _onResume() {
     ga.select(analytics_constants.memory, analytics_constants.resume);
-    memoryController.resumeLiveFeed();
+    controller.resumeLiveFeed();
   }
 
   void _clearTimeline() {
     ga.select(analytics_constants.memory, analytics_constants.clear);
 
-    memoryController.memoryTimeline.reset();
+    controller.memoryTimeline.reset();
 
     // Clear any current Allocation Profile collected.
-    memoryController.monitorAllocations = [];
-    memoryController.monitorTimestamp = null;
-    memoryController.lastMonitorTimestamp.value = null;
-    memoryController.trackAllocations.clear();
-    memoryController.allocationSamples.clear();
+    controller.monitorAllocations = [];
+    controller.monitorTimestamp = null;
+    controller.lastMonitorTimestamp.value = null;
+    controller.trackAllocations.clear();
+    controller.allocationSamples.clear();
 
     // Clear all analysis and snapshots collected too.
-    memoryController.clearAllSnapshots();
-    memoryController.classRoot = null;
-    memoryController.topNode = null;
-    memoryController.selectedSnapshotTimestamp = null;
-    memoryController.selectedLeaf = null;
+    controller.clearAllSnapshots();
+    controller.classRoot = null;
+    controller.topNode = null;
+    controller.selectedSnapshotTimestamp = null;
+    controller.selectedLeaf = null;
 
     // Remove history of all plotted data in all charts.
-    widget.chartControllers.resetAll();
+    widget.chartController.resetAll();
   }
 
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<bool>(
-      valueListenable: memoryController.paused,
+      valueListenable: controller.paused,
       builder: (context, paused, _) {
         return Row(
           mainAxisSize: MainAxisSize.min,
@@ -88,15 +89,14 @@ class _PrimaryControlsState extends State<PrimaryControls>
             const SizedBox(width: defaultSpacing),
             ClearButton(
               // TODO(terry): Button needs to be Delete for offline data.
-              onPressed:
-                  memoryController.memorySource == MemoryController.liveFeed
-                      ? _clearTimeline
-                      : null,
+              onPressed: controller.memorySource == MemoryController.liveFeed
+                  ? _clearTimeline
+                  : null,
               minScreenWidthForTextBeforeScaling:
                   primaryControlsMinVerboseWidth,
             ),
             const SizedBox(width: defaultSpacing),
-            IntervalDropdown(chartControllers: widget.chartControllers),
+            IntervalDropdown(chartController: widget.chartController),
           ],
         );
       },

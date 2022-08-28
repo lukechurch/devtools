@@ -15,6 +15,33 @@ import 'package:flutter/material.dart' hide TableRow;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+class _NonSortableFlatNameColumn extends ColumnData<TestData> {
+  _NonSortableFlatNameColumn.wide(super.title) : super.wide();
+
+  @override
+  String getValue(TestData dataObject) {
+    return dataObject.name;
+  }
+
+  @override
+  bool get supportsSorting => false;
+}
+
+class _NonSortableFlatNumColumn extends ColumnData<TestData> {
+  _NonSortableFlatNumColumn.wide(super.title) : super.wide();
+
+  @override
+  int getValue(TestData dataObject) {
+    return dataObject.number;
+  }
+
+  @override
+  bool get supportsSorting => false;
+
+  @override
+  bool get numeric => true;
+}
+
 void main() {
   setUp(() {
     setGlobal(ServiceConnectionManager, FakeServiceManager());
@@ -51,6 +78,9 @@ void main() {
       );
       await tester.pumpWidget(wrap(table));
       expect(find.byWidget(table), findsOneWidget);
+      debugDumpApp();
+      expect(find.text('FlatName'), findsOneWidget);
+
       final FlatTableState state = tester.state(find.byWidget(table));
       final columnWidths = state.computeColumnWidths(1000);
       expect(columnWidths.length, 1);
@@ -74,6 +104,58 @@ void main() {
       );
       await tester.pumpWidget(wrap(table));
       expect(find.byWidget(table), findsOneWidget);
+
+      // Column headers.
+      expect(find.text('FlatName'), findsOneWidget);
+      expect(find.text('Number'), findsOneWidget);
+
+      // Table data.
+      expect(find.byKey(const Key('Foo')), findsOneWidget);
+      expect(find.byKey(const Key('Bar')), findsOneWidget);
+      // Note that two keys with the same name are allowed but not necessarily a
+      // good idea. We should be using unique identifiers for keys.
+      expect(find.byKey(const Key('Baz')), findsNWidgets(2));
+      expect(find.byKey(const Key('Qux')), findsNWidgets(2));
+      expect(find.byKey(const Key('Snap')), findsOneWidget);
+      expect(find.byKey(const Key('Crackle')), findsOneWidget);
+      expect(find.byKey(const Key('Pop')), findsOneWidget);
+    });
+
+    testWidgetsWithWindowSize(
+        'displays with column groups', const Size(800.0, 1200.0),
+        (WidgetTester tester) async {
+      final table = FlatTable<TestData>(
+        columns: [
+          flatNameColumn,
+          _NumberColumn(),
+        ],
+        columnGroups: [
+          ColumnGroup(
+            title: 'Group 1',
+            range: const Range(0, 1),
+          ),
+          ColumnGroup(
+            title: 'Group 2',
+            range: const Range(1, 2),
+          ),
+        ],
+        data: flatData,
+        onItemSelected: noop,
+        keyFactory: (d) => Key(d.name),
+        sortColumn: flatNameColumn,
+        sortDirection: SortDirection.ascending,
+      );
+      await tester.pumpWidget(wrap(table));
+      expect(find.byWidget(table), findsOneWidget);
+      // Column group headers.
+      expect(find.text('Group 1'), findsOneWidget);
+      expect(find.text('Group 2'), findsOneWidget);
+
+      // Column headers.
+      expect(find.text('FlatName'), findsOneWidget);
+      expect(find.text('Number'), findsOneWidget);
+
+      // Table data.
       expect(find.byKey(const Key('Foo')), findsOneWidget);
       expect(find.byKey(const Key('Bar')), findsOneWidget);
       // Note that two keys with the same name are allowed but not necessarily a
@@ -134,43 +216,116 @@ void main() {
       );
       await tester.pumpWidget(wrap(table));
       final FlatTableState state = tester.state(find.byWidget(table));
-      final data = state.data;
-      expect(data[0].name, equals('Bar'));
-      expect(data[1].name, equals('Baz'));
-      expect(data[2].name, equals('Baz'));
-      expect(data[3].name, equals('Crackle'));
-      expect(data[4].name, equals('Foo'));
-      expect(data[5].name, equals('Pop'));
-      expect(data[6].name, equals('Qux'));
-      expect(data[7].name, equals('Qux'));
-      expect(data[8].name, equals('Snap'));
-
+      {
+        final data = state.data;
+        expect(data[0].name, equals('Bar'));
+        expect(data[1].name, equals('Baz'));
+        expect(data[2].name, equals('Baz'));
+        expect(data[3].name, equals('Crackle'));
+        expect(data[4].name, equals('Foo'));
+        expect(data[5].name, equals('Pop'));
+        expect(data[6].name, equals('Qux'));
+        expect(data[7].name, equals('Qux'));
+        expect(data[8].name, equals('Snap'));
+      }
       // Reverse the sort direction.
       await tester.tap(find.text('FlatName'));
       await tester.pumpAndSettle();
 
-      expect(data[8].name, equals('Bar'));
-      expect(data[7].name, equals('Baz'));
-      expect(data[6].name, equals('Baz'));
-      expect(data[5].name, equals('Crackle'));
-      expect(data[4].name, equals('Foo'));
-      expect(data[3].name, equals('Pop'));
-      expect(data[2].name, equals('Qux'));
-      expect(data[1].name, equals('Qux'));
-      expect(data[0].name, equals('Snap'));
+      {
+        final data = state.data;
+        expect(data[8].name, equals('Bar'));
+        expect(data[7].name, equals('Baz'));
+        expect(data[6].name, equals('Baz'));
+        expect(data[5].name, equals('Crackle'));
+        expect(data[4].name, equals('Foo'));
+        expect(data[3].name, equals('Pop'));
+        expect(data[2].name, equals('Qux'));
+        expect(data[1].name, equals('Qux'));
+        expect(data[0].name, equals('Snap'));
+      }
 
       // Change the sort column.
       await tester.tap(find.text('Number'));
       await tester.pumpAndSettle();
-      expect(data[0].name, equals('Foo'));
-      expect(data[1].name, equals('Bar'));
-      expect(data[2].name, equals('Baz'));
-      expect(data[3].name, equals('Qux'));
-      expect(data[4].name, equals('Snap'));
-      expect(data[5].name, equals('Pop'));
-      expect(data[6].name, equals('Crackle'));
-      expect(data[7].name, equals('Baz'));
-      expect(data[8].name, equals('Qux'));
+
+      {
+        final data = state.data;
+        expect(data[0].name, equals('Foo'));
+        expect(data[1].name, equals('Bar'));
+        expect(data[2].name, equals('Baz'));
+        expect(data[3].name, equals('Qux'));
+        expect(data[4].name, equals('Snap'));
+        expect(data[5].name, equals('Crackle'));
+        expect(data[6].name, equals('Pop'));
+        expect(data[7].name, equals('Baz'));
+        expect(data[8].name, equals('Qux'));
+      }
+    });
+
+    testWidgets('does not sort with supportsSorting == false',
+        (WidgetTester tester) async {
+      final nonSortableFlatNameColumn =
+          _NonSortableFlatNameColumn.wide('FlatName');
+      final nonSortableFlatNumColumn = _NonSortableFlatNumColumn.wide('Number');
+      final table = FlatTable<TestData>(
+        columns: [
+          nonSortableFlatNameColumn,
+          nonSortableFlatNumColumn,
+        ],
+        data: flatData,
+        onItemSelected: noop,
+        keyFactory: (d) => Key(d.name),
+        sortColumn: flatNameColumn,
+        sortDirection: SortDirection.ascending,
+      );
+      await tester.pumpWidget(wrap(table));
+      final FlatTableState state = tester.state(find.byWidget(table));
+      {
+        final data = state.data;
+        expect(data[0].name, equals('Bar'));
+        expect(data[1].name, equals('Baz'));
+        expect(data[2].name, equals('Baz'));
+        expect(data[3].name, equals('Crackle'));
+        expect(data[4].name, equals('Foo'));
+        expect(data[5].name, equals('Pop'));
+        expect(data[6].name, equals('Qux'));
+        expect(data[7].name, equals('Qux'));
+        expect(data[8].name, equals('Snap'));
+      }
+
+      // Attempt to reverse the sort direction.
+      await tester.tap(find.text('FlatName'));
+      await tester.pumpAndSettle();
+
+      {
+        final data = state.data;
+        expect(data[0].name, equals('Bar'));
+        expect(data[1].name, equals('Baz'));
+        expect(data[2].name, equals('Baz'));
+        expect(data[3].name, equals('Crackle'));
+        expect(data[4].name, equals('Foo'));
+        expect(data[5].name, equals('Pop'));
+        expect(data[6].name, equals('Qux'));
+        expect(data[7].name, equals('Qux'));
+        expect(data[8].name, equals('Snap'));
+      }
+
+      // Attempt to change the sort column.
+      await tester.tap(find.text('Number'));
+      await tester.pumpAndSettle();
+      {
+        final data = state.data;
+        expect(data[0].name, equals('Bar'));
+        expect(data[1].name, equals('Baz'));
+        expect(data[2].name, equals('Baz'));
+        expect(data[3].name, equals('Crackle'));
+        expect(data[4].name, equals('Foo'));
+        expect(data[5].name, equals('Pop'));
+        expect(data[6].name, equals('Qux'));
+        expect(data[7].name, equals('Qux'));
+        expect(data[8].name, equals('Snap'));
+      }
     });
 
     testWidgets('sorts data by column and secondary column',
@@ -200,43 +355,51 @@ void main() {
       );
       await tester.pumpWidget(wrap(table));
       final FlatTableState state = tester.state(find.byWidget(table));
-      final data = state.data;
-      expect(data[0].name, equals('Foo'));
-      expect(data[1].name, equals('1 Bar'));
-      expect(data[2].name, equals('# Baz'));
-      expect(data[3].name, equals('Qux'));
-      expect(data[4].name, equals('Bang'));
-      expect(data[5].name, equals('Crackle'));
-      expect(data[6].name, equals('Pop'));
-      expect(data[7].name, equals('Snap'));
-      expect(data[8].name, equals('Qux'));
+      {
+        final data = state.data;
+        expect(data[0].name, equals('Foo'));
+        expect(data[1].name, equals('1 Bar'));
+        expect(data[2].name, equals('# Baz'));
+        expect(data[3].name, equals('Qux'));
+        expect(data[4].name, equals('Bang'));
+        expect(data[5].name, equals('Crackle'));
+        expect(data[6].name, equals('Pop'));
+        expect(data[7].name, equals('Snap'));
+        expect(data[8].name, equals('Qux'));
+      }
 
       // Reverse the sort direction.
       await tester.tap(find.text('Number'));
       await tester.pumpAndSettle();
 
-      expect(data[8].name, equals('Foo'));
-      expect(data[7].name, equals('1 Bar'));
-      expect(data[6].name, equals('# Baz'));
-      expect(data[5].name, equals('Qux'));
-      expect(data[4].name, equals('Bang'));
-      expect(data[3].name, equals('Crackle'));
-      expect(data[2].name, equals('Pop'));
-      expect(data[1].name, equals('Snap'));
-      expect(data[0].name, equals('Qux'));
-
+      {
+        final data = state.data;
+        expect(data[8].name, equals('Foo'));
+        expect(data[7].name, equals('1 Bar'));
+        expect(data[6].name, equals('# Baz'));
+        expect(data[5].name, equals('Qux'));
+        expect(data[4].name, equals('Bang'));
+        expect(data[3].name, equals('Crackle'));
+        expect(data[2].name, equals('Pop'));
+        expect(data[1].name, equals('Snap'));
+        expect(data[0].name, equals('Qux'));
+      }
       // Change the sort column.
       await tester.tap(find.text('FlatName'));
       await tester.pumpAndSettle();
-      expect(data[0].name, equals('# Baz'));
-      expect(data[1].name, equals('1 Bar'));
-      expect(data[2].name, equals('Bang'));
-      expect(data[3].name, equals('Crackle'));
-      expect(data[4].name, equals('Foo'));
-      expect(data[5].name, equals('Pop'));
-      expect(data[6].name, equals('Qux'));
-      expect(data[7].name, equals('Qux'));
-      expect(data[8].name, equals('Snap'));
+
+      {
+        final data = state.data;
+        expect(data[0].name, equals('# Baz'));
+        expect(data[1].name, equals('1 Bar'));
+        expect(data[2].name, equals('Bang'));
+        expect(data[3].name, equals('Crackle'));
+        expect(data[4].name, equals('Foo'));
+        expect(data[5].name, equals('Pop'));
+        expect(data[6].name, equals('Qux'));
+        expect(data[7].name, equals('Qux'));
+        expect(data[8].name, equals('Snap'));
+      }
     });
 
     testWidgets('displays with many columns', (WidgetTester tester) async {
@@ -491,6 +654,124 @@ void main() {
       expect(selected, isNull);
       await tester.tap(find.byKey(key));
       expect(selected, testData);
+    });
+
+    testWidgets('can pin items (original)', (WidgetTester tester) async {
+      final column = _PinnableFlatNameColumn();
+      final testData = [
+        for (int i = 0; i < 10; ++i)
+          PinnableTestData(name: i.toString(), enabled: i % 2 == 0),
+      ];
+
+      final table = FlatTable<PinnableTestData>(
+        columns: [column],
+        data: testData,
+        keyFactory: (d) => Key(d.name),
+        onItemSelected: (_) => null,
+        sortColumn: column,
+        sortDirection: SortDirection.ascending,
+        pinBehavior: FlatTablePinBehavior.pinOriginalToTop,
+      );
+      await tester.pumpWidget(wrap(table));
+
+      expect(find.byWidget(table), findsOneWidget);
+
+      final FlatTableState<PinnableTestData> state = tester.state(
+        find.byWidget(table),
+      );
+
+      expect(state.pinnedData.length, testData.length / 2);
+      for (int i = 0; i < state.pinnedData.length; ++i) {
+        expect(state.pinnedData[i].name, (i * 2).toString());
+        expect(state.pinnedData[i].enabled, true);
+      }
+      expect(state.data.length, testData.length / 2);
+      for (int i = 0; i < state.data.length; ++i) {
+        expect(state.data[i].name, ((i * 2) + 1).toString());
+        expect(state.data[i].enabled, false);
+      }
+
+      // Sorting should apply to both pinned and unpinned items.
+      await tester.tap(find.text(column.title));
+      await tester.pumpAndSettle();
+
+      expect(state.pinnedData.length, testData.length / 2);
+      for (int i = 0; i < state.pinnedData.length; ++i) {
+        final index = state.data.length - i - 1;
+        expect(
+          state.pinnedData[i].name,
+          (index * 2).toString(),
+        );
+        expect(state.pinnedData[i].enabled, true);
+      }
+      expect(state.data.length, testData.length / 2);
+      for (int i = 0; i < state.data.length; ++i) {
+        final index = state.data.length - i - 1;
+        expect(
+          state.data[i].name,
+          ((index * 2) + 1).toString(),
+        );
+        expect(state.data[i].enabled, false);
+      }
+    });
+
+    testWidgets('can pin items (copy)', (WidgetTester tester) async {
+      final column = _PinnableFlatNameColumn();
+      final testData = [
+        for (int i = 0; i < 10; ++i)
+          PinnableTestData(name: i.toString(), enabled: i % 2 == 0),
+      ];
+
+      final table = FlatTable<PinnableTestData>(
+        columns: [column],
+        data: testData,
+        keyFactory: (d) => Key(d.name),
+        onItemSelected: (_) => null,
+        sortColumn: column,
+        sortDirection: SortDirection.ascending,
+        pinBehavior: FlatTablePinBehavior.pinCopyToTop,
+      );
+      await tester.pumpWidget(wrap(table));
+
+      expect(find.byWidget(table), findsOneWidget);
+
+      final FlatTableState<PinnableTestData> state = tester.state(
+        find.byWidget(table),
+      );
+
+      expect(state.pinnedData.length, testData.length / 2);
+      for (int i = 0; i < state.pinnedData.length; ++i) {
+        expect(state.pinnedData[i].name, (i * 2).toString());
+        expect(state.pinnedData[i].enabled, true);
+      }
+      expect(state.data.length, testData.length);
+      for (int i = 0; i < state.data.length; ++i) {
+        expect(state.data[i].name, i.toString());
+        expect(state.data[i].enabled, i % 2 == 0);
+      }
+
+      // Sorting should apply to both pinned and unpinned items.
+      await tester.tap(find.text(column.title));
+      await tester.pumpAndSettle();
+
+      expect(state.pinnedData.length, testData.length / 2);
+      for (int i = 0; i < state.pinnedData.length; ++i) {
+        final index = state.pinnedData.length - i - 1;
+        expect(
+          state.pinnedData[i].name,
+          (index * 2).toString(),
+        );
+        expect(state.pinnedData[i].enabled, true);
+      }
+      expect(state.data.length, testData.length);
+      for (int i = 0; i < state.data.length; ++i) {
+        final index = state.data.length - i - 1;
+        expect(
+          state.data[i].name,
+          index.toString(),
+        );
+        expect(state.data[i].enabled, index % 2 == 0);
+      }
     });
   });
 
@@ -981,6 +1262,22 @@ class TestData extends TreeNode<TestData> {
   }
 }
 
+class PinnableTestData implements PinnableListEntry {
+  PinnableTestData({
+    required this.name,
+    required this.enabled,
+  });
+
+  final String name;
+  final bool enabled;
+
+  @override
+  bool get pinToTop => enabled;
+
+  @override
+  String toString() => name;
+}
+
 class _NameColumn extends TreeColumnData<TestData> {
   _NameColumn() : super('Name');
 
@@ -1014,6 +1311,20 @@ class _FlatNameColumn extends ColumnData<TestData> {
 
   @override
   String getValue(TestData dataObject) => dataObject.name;
+
+  @override
+  bool get supportsSorting => true;
+}
+
+class _PinnableFlatNameColumn extends ColumnData<PinnableTestData> {
+  _PinnableFlatNameColumn()
+      : super(
+          'FlatName',
+          fixedWidthPx: 300.0,
+        );
+
+  @override
+  String getValue(PinnableTestData dataObject) => dataObject.name;
 
   @override
   bool get supportsSorting => true;

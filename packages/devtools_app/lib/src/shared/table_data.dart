@@ -7,6 +7,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../primitives/trees.dart';
+import '../primitives/utils.dart';
 import 'utils.dart';
 
 // TODO(peterdjlee): Remove get from method names.
@@ -60,6 +61,8 @@ abstract class ColumnData<T> {
   String getDisplayValue(T dataObject) =>
       getValue(dataObject)?.toString() ?? '';
 
+  String? getCaption(T dataObject) => null;
+
   // TODO(kenz): this isn't hooked up to the table elements. Do this.
   /// Get the cell's tooltip value from the given [dataObject].
   String getTooltip(T dataObject) => getDisplayValue(dataObject);
@@ -96,4 +99,24 @@ enum ColumnAlignment {
   left,
   right,
   center,
+}
+
+mixin PinnableListEntry {
+  /// Determines if the row should be pinned to the top of the table.
+  bool get pinToTop => false;
+}
+
+/// Defines a group of columns for use in a table.
+///
+/// Use a column group when multiple columns should be grouped together in the
+/// table with a common title. In a table with column groups, visual dividers
+/// will be drawn between groups and an additional header row will be added to
+/// the table to display the column group titles.
+class ColumnGroup {
+  ColumnGroup({required this.title, required this.range});
+
+  final String title;
+
+  /// The range of column indices for columns that make up this group.
+  final Range range;
 }

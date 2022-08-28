@@ -5,6 +5,7 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 
 import '../../../devtools.dart';
 import '../../primitives/utils.dart';
@@ -12,7 +13,6 @@ import '../../screens/performance/performance_model.dart';
 import '../../screens/performance/performance_screen.dart';
 import '../../shared/connected_app.dart';
 import '../../shared/globals.dart';
-import '../../shared/notifications.dart';
 import '_export_stub.dart'
     if (dart.library.html) '_export_web.dart'
     if (dart.library.io) '_export_desktop.dart';
@@ -41,15 +41,12 @@ String successfulExportMessage(String exportedFile) {
 // TODO(kenz): we should support a file picker import for desktop.
 class ImportController {
   ImportController(
-    this._notifications,
     this._pushSnapshotScreenForImport,
   );
 
   static const repeatImportTimeBufferMs = 500;
 
   final void Function(String screenId) _pushSnapshotScreenForImport;
-
-  final NotificationService _notifications;
 
   DateTime? previousImportTime;
 
@@ -72,20 +69,42 @@ class ImportController {
     final isDevToolsSnapshot =
         _json is Map<String, dynamic> && _json[devToolsSnapshotKey] == true;
     if (!isDevToolsSnapshot) {
-      _notifications.push(nonDevToolsFileMessage);
+      notificationService.push(nonDevToolsFileMessage);
       return;
     }
 
     final devToolsSnapshot = _json;
     // TODO(kenz): support imports for more than one screen at a time.
     final activeScreenId = devToolsSnapshot[activeScreenIdKey];
+    final connectedApp =
+        (devToolsSnapshot[connectedAppKey] ?? <String, Object>{})
+            .cast<String, Object>();
     offlineController
       ..enterOfflineMode()
       ..offlineDataJson = devToolsSnapshot;
-    serviceManager.connectedApp =
-        OfflineConnectedApp.parse(devToolsSnapshot[connectedAppKey]);
-    _notifications.push(attemptingToImportMessage(activeScreenId));
+    serviceManager.connectedApp = OfflineConnectedApp.parse(connectedApp);
+    notificationService.push(attemptingToImportMessage(activeScreenId));
     _pushSnapshotScreenForImport(activeScreenId);
+  }
+}
+
+enum ExportFileType {
+  json,
+  csv,
+  yaml;
+
+  @override
+  String toString() {
+    switch (this) {
+      case json:
+        return 'json';
+      case csv:
+        return 'csv';
+      case yaml:
+        return 'yaml';
+      default:
+        throw UnimplementedError('Unable to convert $this to a string');
+    }
   }
 }
 
@@ -96,16 +115,24 @@ abstract class ExportController {
 
   const ExportController.impl();
 
-  String generateFileName() {
-    final now = DateTime.now();
-    final timestamp =
-        '${now.year}_${now.month}_${now.day}-${now.microsecondsSinceEpoch}';
-    return 'dart_devtools_$timestamp.json';
+  String generateFileName({
+    String prefix = 'dart_devtools',
+    String postfix = '',
+    required ExportFileType type,
+    DateTime? time,
+  }) {
+    time ??= DateTime.now();
+    final timestamp = DateFormat('yyyy-MM-dd_HH:mm:ss.SSS').format(time);
+    return '${prefix}_$timestamp$postfix.$type';
   }
 
-  /// Downloads a JSON file with [contents] and returns the name of the
+  /// Downloads a file with [contents] and returns the name of the
   /// downloaded file.
-  String downloadFile(String contents);
+  String downloadFile(
+    String contents, {
+    String? fileName,
+    ExportFileType type = ExportFileType.json,
+  });
 
   String encode(String activeScreenId, Map<String, dynamic> contents) {
     final _contents = {

@@ -4,14 +4,17 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import '../../primitives/auto_dispose_mixin.dart';
 import '../../shared/screen.dart';
 import '../../shared/theme.dart';
+import '../../shared/utils.dart';
 import 'isolate_statistics_view.dart';
+import 'object_inspector_view.dart';
 import 'vm_developer_tools_controller.dart';
 import 'vm_statistics_view.dart';
+
+bool displayObjectInspector = false;
 
 abstract class VMDeveloperView {
   const VMDeveloperView(
@@ -38,9 +41,8 @@ abstract class VMDeveloperView {
 }
 
 class VMDeveloperToolsScreen extends Screen {
-  const VMDeveloperToolsScreen({
-    required this.controller,
-  }) : super.conditional(
+  const VMDeveloperToolsScreen()
+      : super.conditional(
           id: id,
           title: 'VM Tools',
           icon: Icons.settings_applications,
@@ -49,11 +51,9 @@ class VMDeveloperToolsScreen extends Screen {
 
   static const id = 'vm-tools';
 
-  final VMDeveloperToolsController controller;
-
   @override
   ValueListenable<bool> get showIsolateSelector =>
-      controller.showIsolateSelector;
+      VMDeveloperToolsController.showIsolateSelector;
 
   @override
   Widget build(BuildContext context) => const VMDeveloperToolsScreenBody();
@@ -62,9 +62,10 @@ class VMDeveloperToolsScreen extends Screen {
 class VMDeveloperToolsScreenBody extends StatefulWidget {
   const VMDeveloperToolsScreenBody();
 
-  static const List<VMDeveloperView> views = [
-    VMStatisticsView(),
-    IsolateStatisticsView(),
+  static List<VMDeveloperView> views = [
+    const VMStatisticsView(),
+    const IsolateStatisticsView(),
+    if (displayObjectInspector) ObjectInspectorView(),
   ];
 
   @override
@@ -72,18 +73,14 @@ class VMDeveloperToolsScreenBody extends StatefulWidget {
 }
 
 class _VMDeveloperToolsScreenState extends State<VMDeveloperToolsScreenBody>
-    with AutoDisposeMixin {
-  bool initialized = false;
-  late VMDeveloperToolsController controller;
-
+    with
+        AutoDisposeMixin,
+        ProvidedControllerMixin<VMDeveloperToolsController,
+            VMDeveloperToolsScreenBody> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final newController = Provider.of<VMDeveloperToolsController>(context);
-    // Don't access `controller` if we haven't already initialized it.
-    if (initialized && newController == controller) return;
-    controller = newController;
-    initialized = true;
+    initController();
   }
 
   @override
@@ -112,8 +109,13 @@ class _VMDeveloperToolsScreenState extends State<VMDeveloperToolsScreenBody>
                 padding: const EdgeInsets.only(
                   left: defaultSpacing,
                 ),
-                child: VMDeveloperToolsScreenBody.views[selectedIndex]
-                    .build(context),
+                child: IndexedStack(
+                  index: selectedIndex,
+                  children: [
+                    for (final view in VMDeveloperToolsScreenBody.views)
+                      view.build(context)
+                  ],
+                ),
               ),
             )
           ],

@@ -9,16 +9,20 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:vm_service/vm_service.dart';
 
 import '../analytics/analytics.dart' as ga;
 import '../config_specific/launch_url/launch_url.dart';
 import '../primitives/auto_dispose_mixin.dart';
 import '../primitives/flutter_widgets/linked_scroll_controller.dart';
 import '../primitives/utils.dart';
+import '../screens/debugger/debugger_controller.dart';
+import '../screens/debugger/variables.dart';
 import '../ui/icons.dart';
 import '../ui/label.dart';
+import 'dialogs.dart';
 import 'globals.dart';
-import 'scaffold.dart';
+import 'object_tree.dart';
 import 'theme.dart';
 import 'utils.dart';
 
@@ -91,7 +95,9 @@ class OutlinedIconButton extends IconLabelButton {
     required IconData icon,
     required VoidCallback? onPressed,
     String? tooltip,
+    Key? key,
   }) : super(
+          key: key,
           icon: icon,
           label: '',
           tooltip: tooltip,
@@ -186,11 +192,11 @@ class IconLabelButton extends StatelessWidget {
               )
             : TextButton(
                 onPressed: onPressed,
-                child: iconLabel,
-                style: denseAwareOutlinedButtonStyle(
+                style: denseAwareTextButtonStyle(
                   context,
                   minScreenWidthForTextBeforeScaling,
                 ),
+                child: iconLabel,
               ),
       ),
     );
@@ -257,7 +263,8 @@ class RefreshButton extends IconLabelButton {
     double? minScreenWidthForTextBeforeScaling,
     String? tooltip,
     required VoidCallback? onPressed,
-  }) : super(
+  })  : isIconButton = false,
+        super(
           key: key,
           icon: Icons.refresh,
           label: label,
@@ -266,6 +273,41 @@ class RefreshButton extends IconLabelButton {
           tooltip: tooltip,
           onPressed: onPressed,
         );
+
+  const RefreshButton.icon({
+    Key? key,
+    String? tooltip,
+    required VoidCallback? onPressed,
+  })  : isIconButton = true,
+        super(
+          key: key,
+          icon: Icons.refresh,
+          label: '',
+          tooltip: tooltip,
+          onPressed: onPressed,
+        );
+
+  final bool isIconButton;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isIconButton) {
+      return super.build(context);
+    }
+    return OutlinedIconButton(
+      onPressed: onPressed,
+      icon: icon!,
+    );
+  }
+}
+
+/// A Refresh ToolbarAction button.
+class ToolbarRefresh extends ToolbarAction {
+  const ToolbarRefresh({
+    super.icon = Icons.refresh,
+    required super.onPressed,
+    super.tooltip = 'Refresh',
+  });
 }
 
 /// Button to start recording data.
@@ -559,41 +601,6 @@ class ExitOfflineButton extends IconLabelButton {
         );
 }
 
-/// Display a single bullet character in order to act as a stylized spacer
-/// component.
-class BulletSpacer extends StatelessWidget {
-  const BulletSpacer({this.useAccentColor = false});
-
-  final bool useAccentColor;
-
-  static double get width => DevToolsScaffold.actionWidgetSize / 2;
-
-  @override
-  Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-
-    late TextStyle? textStyle;
-    if (useAccentColor) {
-      textStyle = theme.appBarTheme.toolbarTextStyle ??
-          theme.primaryTextTheme.bodyText2;
-    } else {
-      textStyle = theme.textTheme.bodyText2;
-    }
-
-    final mutedColor = textStyle?.color?.withAlpha(0x90);
-
-    return Container(
-      width: width,
-      height: DevToolsScaffold.actionWidgetSize,
-      alignment: Alignment.center,
-      child: Text(
-        '•',
-        style: textStyle?.copyWith(color: mutedColor),
-      ),
-    );
-  }
-}
-
 /// A small element containing some accessory information, often a numeric
 /// value.
 class Badge extends StatelessWidget {
@@ -860,9 +867,9 @@ class DevToolsToggleButtonGroup extends StatelessWidget {
         minWidth: defaultButtonHeight,
         minHeight: defaultButtonHeight,
       ),
-      children: children,
       isSelected: selectedStates,
       onPressed: onPressed,
+      children: children,
     );
   }
 }
@@ -889,6 +896,91 @@ class ExportButton extends IconLabelButton {
         );
 }
 
+/// Button to open related information / documentation.
+///
+/// [tooltip] specifies the hover text for the button.
+/// [link] is the link that should be opened when the button is clicked.
+class InformationButton extends StatelessWidget {
+  const InformationButton({
+    Key? key,
+    required this.tooltip,
+    required this.link,
+  }) : super(key: key);
+
+  final String tooltip;
+
+  final String link;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: IconButton(
+        icon: const Icon(Icons.help_outline),
+        onPressed: () async => await launchUrl(link, context),
+      ),
+    );
+  }
+}
+
+class ToggleButton extends StatelessWidget {
+  const ToggleButton({
+    Key? key,
+    required this.onPressed,
+    required this.isSelected,
+    required this.message,
+    required this.icon,
+    this.label,
+  }) : super(key: key);
+
+  final String message;
+
+  final VoidCallback onPressed;
+
+  final bool isSelected;
+
+  final IconData icon;
+
+  final Text? label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return DevToolsTooltip(
+      message: message,
+      // TODO(kenz): this SizedBox wrapper should be unnecessary once
+      // https://github.com/flutter/flutter/issues/79894 is fixed.
+      child: SizedBox(
+        height: defaultButtonHeight,
+        child: OutlinedButton(
+          key: key,
+          onPressed: onPressed,
+          style: TextButton.styleFrom(
+            backgroundColor: isSelected
+                ? theme.colorScheme.toggleButtonBackgroundColor
+                : Colors.transparent,
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                size: defaultIconSize,
+                color: isSelected
+                    ? theme.colorScheme.toggleButtonForegroundColor
+                    : theme.colorScheme.contrastForeground,
+              ),
+              if (label != null) ...[
+                const SizedBox(width: denseSpacing),
+                label!,
+              ]
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class FilterButton extends StatelessWidget {
   const FilterButton({
     Key? key,
@@ -902,30 +994,11 @@ class FilterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return DevToolsTooltip(
+    return ToggleButton(
+      onPressed: onPressed,
+      isSelected: isFilterActive,
       message: 'Filter',
-      // TODO(kenz): this SizedBox wrapper should be unnecessary once
-      // https://github.com/flutter/flutter/issues/79894 is fixed.
-      child: SizedBox(
-        height: defaultButtonHeight,
-        child: OutlinedButton(
-          key: key,
-          onPressed: onPressed,
-          style: TextButton.styleFrom(
-            backgroundColor: isFilterActive
-                ? theme.colorScheme.toggleButtonBackgroundColor
-                : Colors.transparent,
-          ),
-          child: Icon(
-            Icons.filter_list,
-            size: defaultIconSize,
-            color: isFilterActive
-                ? theme.colorScheme.toggleButtonForegroundColor
-                : theme.colorScheme.contrastForeground,
-          ),
-        ),
-      ),
+      icon: Icons.filter_list,
     );
   }
 }
@@ -974,6 +1047,52 @@ class RoundedDropDownButton<T> extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class DevToolsClearableTextField extends StatelessWidget {
+  DevToolsClearableTextField({
+    Key? key,
+    required this.labelText,
+    TextEditingController? controller,
+    this.hintText,
+    this.onChanged,
+    this.autofocus = false,
+  })  : controller = controller ?? TextEditingController(),
+        super(key: key);
+
+  final TextEditingController controller;
+  final String? hintText;
+  final String labelText;
+  final Function(String)? onChanged;
+  final bool autofocus;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      autofocus: autofocus,
+      controller: controller,
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        contentPadding: const EdgeInsets.all(denseSpacing),
+        constraints: BoxConstraints(
+          minHeight: defaultTextFieldHeight,
+          maxHeight: defaultTextFieldHeight,
+        ),
+        border: const OutlineInputBorder(),
+        labelText: labelText,
+        hintText: hintText,
+        suffixIcon: IconButton(
+          tooltip: 'Clear',
+          icon: const Icon(Icons.clear),
+          onPressed: () {
+            controller.clear();
+            onChanged?.call('');
+          },
+        ),
+        isDense: true,
       ),
     );
   }
@@ -1395,6 +1514,7 @@ class _BreadcrumbPainter extends CustomPainter {
   }
 }
 
+// TODO(bkonyi): replace uses of this class with `JsonViewer`.
 class FormattedJson extends StatelessWidget {
   const FormattedJson({
     this.json,
@@ -1417,6 +1537,86 @@ class FormattedJson extends StatelessWidget {
     return SelectableText(
       json != null ? encoder.convert(json) : formattedString!,
       style: useSubtleStyle ? theme.subtleFixedFontStyle : theme.fixedFontStyle,
+    );
+  }
+}
+
+class JsonViewer extends StatefulWidget {
+  const JsonViewer({
+    required this.encodedJson,
+  });
+
+  final String encodedJson;
+
+  @override
+  State<JsonViewer> createState() => _JsonViewerState();
+}
+
+class _JsonViewerState extends State<JsonViewer>
+    with ProvidedControllerMixin<DebuggerController, JsonViewer> {
+  late Future<void> _initializeTree;
+  late DartObjectNode variable;
+
+  @override
+  void initState() {
+    super.initState();
+    assert(widget.encodedJson.isNotEmpty);
+    final responseJson = json.decode(widget.encodedJson);
+    // Insert the JSON data into the fake service cache so we can use it with
+    // the `ExpandableVariable` widget.
+    final root =
+        serviceManager.service!.fakeServiceCache.insertJsonObject(responseJson);
+    variable = DartObjectNode.fromValue(
+      name: '[root]',
+      value: root,
+      artificialName: true,
+      isolateRef: IsolateRef(
+        id: 'fake-isolate',
+        number: 'fake-isolate',
+        name: 'local-cache',
+        isSystemIsolate: true,
+      ),
+    );
+    _initializeTree = buildVariablesTree(variable);
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    // Remove the JSON object from the fake service cache to avoid holding on
+    // to large objects indefinitely.
+    serviceManager.service!.fakeServiceCache
+        .removeJsonObject(variable.value as Instance);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Currently a redundant check, but adding it anyway to prevent future
+    // bugs being introduced.
+    if (!initController()) {
+      return;
+    }
+    // Any additional initialization code should be added after this line.
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(denseSpacing),
+      child: SingleChildScrollView(
+        child: FutureBuilder(
+          future: _initializeTree,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done)
+              return Container();
+            return ExpandableVariable(
+              variable: variable,
+              debuggerController: controller,
+            );
+          },
+        ),
+      ),
     );
   }
 }
@@ -1477,24 +1677,35 @@ class LinkTextSpan extends TextSpan {
     required Link link,
     required BuildContext context,
     TextStyle? style,
-    VoidCallback? onTap,
   }) : super(
           text: link.display,
           style: style ?? Theme.of(context).linkTextStyle,
           recognizer: TapGestureRecognizer()
             ..onTap = () async {
-              if (onTap != null) onTap();
+              ga.select(
+                link.gaScreenName,
+                link.gaSelectedItemDescription,
+              );
               await launchUrl(link.url, context);
             },
         );
 }
 
 class Link {
-  const Link({required this.display, required this.url});
+  const Link({
+    required this.display,
+    required this.url,
+    required this.gaScreenName,
+    required this.gaSelectedItemDescription,
+  });
 
   final String display;
 
   final String url;
+
+  final String gaScreenName;
+
+  final String gaSelectedItemDescription;
 }
 
 Widget maybeWrapWithTooltip({
@@ -1922,10 +2133,10 @@ class ElevatedCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(defaultBorderRadius),
       ),
       child: Container(
-        child: child,
         width: width,
         height: height,
         padding: padding ?? const EdgeInsets.all(denseSpacing),
+        child: child,
       ),
     );
   }
@@ -1957,5 +2168,81 @@ class _KeepAliveWrapperState extends State<KeepAliveWrapper>
   Widget build(BuildContext context) {
     super.build(context);
     return widget.child;
+  }
+}
+
+/// Help button, that opens a dialog on click.
+class HelpButtonWithDialog extends StatelessWidget {
+  const HelpButtonWithDialog({
+    required this.gaScreen,
+    required this.gaSelection,
+    required this.dialogTitle,
+    required this.child,
+  });
+
+  final String gaScreen;
+
+  final String gaSelection;
+
+  final String dialogTitle;
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return HelpButton(
+      onPressed: () {
+        ga.select(gaScreen, gaSelection);
+        showDialog(
+          context: context,
+          builder: (context) => DevToolsDialog(
+            title: dialogTitleText(theme, dialogTitle),
+            includeDivider: false,
+            content: child,
+            actions: [
+              DialogCloseButton(),
+            ],
+          ),
+        );
+      },
+      gaScreen: gaScreen,
+      gaSelection: gaSelection,
+    );
+  }
+}
+
+/// Display a single bullet character in order to act as a stylized spacer
+/// component.
+class BulletSpacer extends StatelessWidget {
+  const BulletSpacer({this.useAccentColor = false});
+
+  final bool useAccentColor;
+
+  static double get width => actionWidgetSize / 2;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+
+    late TextStyle? textStyle;
+    if (useAccentColor) {
+      textStyle = theme.appBarTheme.toolbarTextStyle ??
+          theme.primaryTextTheme.bodyText2;
+    } else {
+      textStyle = theme.textTheme.bodyText2;
+    }
+
+    final mutedColor = textStyle?.color?.withAlpha(0x90);
+
+    return Container(
+      width: width,
+      height: actionWidgetSize,
+      alignment: Alignment.center,
+      child: Text(
+        '•',
+        style: textStyle?.copyWith(color: mutedColor),
+      ),
+    );
   }
 }

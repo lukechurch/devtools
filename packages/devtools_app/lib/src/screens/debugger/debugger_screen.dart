@@ -18,6 +18,7 @@ import '../../shared/globals.dart';
 import '../../shared/screen.dart';
 import '../../shared/split.dart';
 import '../../shared/theme.dart';
+import '../../shared/utils.dart';
 import '../../ui/icons.dart';
 import 'breakpoints.dart';
 import 'call_stack.dart';
@@ -27,6 +28,7 @@ import 'debugger_controller.dart';
 import 'debugger_model.dart';
 import 'key_sets.dart';
 import 'program_explorer.dart';
+import 'program_explorer_model.dart';
 import 'variables.dart';
 
 class DebuggerScreen extends Screen {
@@ -84,8 +86,6 @@ class DebuggerScreenBody extends StatefulWidget {
 
   static final codeViewKey = GlobalKey(debugLabel: 'codeViewKey');
   static final scriptViewKey = GlobalKey(debugLabel: 'scriptViewKey');
-  static final programExplorerKey =
-      GlobalKey(debugLabel: 'programExploreryKey');
   static const callStackCopyButtonKey =
       Key('debugger_call_stack_copy_to_clipboard_button');
 
@@ -94,13 +94,12 @@ class DebuggerScreenBody extends StatefulWidget {
 }
 
 class DebuggerScreenBodyState extends State<DebuggerScreenBody>
-    with AutoDisposeMixin {
+    with
+        AutoDisposeMixin,
+        ProvidedControllerMixin<DebuggerController, DebuggerScreenBody> {
   static const callStackTitle = 'Call Stack';
   static const variablesTitle = 'Variables';
   static const breakpointsTitle = 'Breakpoints';
-
-  DebuggerController get controller => _controller!;
-  DebuggerController? _controller;
 
   late bool _shownFirstScript;
 
@@ -115,14 +114,12 @@ class DebuggerScreenBodyState extends State<DebuggerScreenBody>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-
-    final newController = Provider.of<DebuggerController>(context);
-    if (newController == _controller) return;
-    _controller = newController;
+    if (!initController()) return;
     controller.onFirstDebuggerScreenLoad();
   }
 
-  void _onLocationSelected(ScriptLocation? location) {
+  void _onNodeSelected(VMServiceObjectNode? node) {
+    final location = node?.location;
     if (location != null) {
       controller.showScriptLocation(location);
     }
@@ -141,9 +138,8 @@ class DebuggerScreenBodyState extends State<DebuggerScreenBody>
             children: [
               child!,
               ProgramExplorer(
-                key: DebuggerScreenBody.programExplorerKey,
                 controller: controller.programExplorerController,
-                onSelected: _onLocationSelected,
+                onNodeSelected: _onNodeSelected,
               ),
             ],
           );
@@ -246,12 +242,12 @@ class DebuggerScreenBodyState extends State<DebuggerScreenBody>
           children: [
             BreakpointsCountBadge(breakpoints: breakpoints),
             DevToolsTooltip(
+              message: 'Remove all breakpoints',
               child: ToolbarAction(
                 icon: Icons.delete,
                 onPressed:
                     breakpoints.isNotEmpty ? controller.clearBreakpoints : null,
               ),
-              message: 'Remove all breakpoints',
             ),
           ],
         );
@@ -406,9 +402,9 @@ class FloatingDebuggerControls extends StatefulWidget {
 }
 
 class _FloatingDebuggerControlsState extends State<FloatingDebuggerControls>
-    with AutoDisposeMixin {
-  late DebuggerController controller;
-
+    with
+        AutoDisposeMixin,
+        ProvidedControllerMixin<DebuggerController, FloatingDebuggerControls> {
   late bool paused;
 
   late double controlHeight;
@@ -416,7 +412,7 @@ class _FloatingDebuggerControlsState extends State<FloatingDebuggerControls>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    controller = Provider.of<DebuggerController>(context);
+    if (!initController()) return;
     paused = controller.isPaused.value;
     controlHeight = paused ? defaultButtonHeight : 0.0;
     addAutoDisposeListener(controller.isPaused, () {

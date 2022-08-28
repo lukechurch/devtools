@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'package:vm_service/vm_service.dart';
 
 import '../primitives/utils.dart';
+import 'json_to_service_cache.dart';
 
 class VmServiceWrapper implements VmService {
   VmServiceWrapper(
@@ -71,6 +72,10 @@ class VmServiceWrapper implements VmService {
     ..complete(true);
 
   Future<void> get allFuturesCompleted => _allFuturesCompleter.future;
+
+  // A local cache of "fake" service objects. Used to convert JSON objects to
+  // VM service response formats to be used with APIs that require them.
+  final fakeServiceCache = JsonToServiceCache();
 
   /// Executes `callback` for each isolate, and waiting for all callbacks to
   /// finish before completing.
@@ -219,7 +224,15 @@ class VmServiceWrapper implements VmService {
   }) async {
     return trackFuture(
       'getAllocationProfile',
-      _vmService.getAllocationProfile(isolateId, reset: reset, gc: gc),
+      _vmService.callMethod(
+        // TODO(bkonyi): add _new and _old to public response.
+        '_getAllocationProfile',
+        isolateId: isolateId,
+        args: <String, dynamic>{
+          if (reset != null && reset) 'reset': reset,
+          if (gc != null && gc) 'gc': gc,
+        },
+      ).then((r) => r as AllocationProfile),
     );
   }
 
@@ -284,6 +297,14 @@ class VmServiceWrapper implements VmService {
     int? offset,
     int? count,
   }) {
+    final cachedObj = fakeServiceCache.getObject(
+      objectId: objectId,
+      offset: offset,
+      count: count,
+    );
+    if (cachedObj != null) {
+      return Future.value(cachedObj);
+    }
     return trackFuture(
       'getObject',
       _vmService.getObject(
@@ -690,11 +711,12 @@ class VmServiceWrapper implements VmService {
   @override
   Future<UriList> lookupResolvedPackageUris(
     String isolateId,
-    List<String> uris,
-  ) async {
+    List<String> uris, {
+    bool? local,
+  }) async {
     return trackFuture(
       'lookupResolvedPackageUris',
-      _vmService.lookupResolvedPackageUris(isolateId, uris),
+      _vmService.lookupResolvedPackageUris(isolateId, uris, local: local),
     );
   }
 
