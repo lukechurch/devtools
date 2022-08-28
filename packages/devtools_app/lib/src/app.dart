@@ -484,8 +484,8 @@ class OpenIDGAction extends StatelessWidget {
           idgController.toggleIDGVisible(true);
         },
         child: Container(
-          width: DevToolsScaffold.actionWidgetSize,
-          height: DevToolsScaffold.actionWidgetSize,
+          width: actionWidgetSize,
+          height: actionWidgetSize,
           alignment: Alignment.center,
           child: Icon(
             Octicons.clippy,
