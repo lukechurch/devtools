@@ -141,7 +141,7 @@ var _s7 = idg_core.Step(
       frameworkController.notifyShowPageId(PerformanceScreen.id);
     }),
     idg_core.Action('Select element', () async {
-      frameworkController.notifyTest(4);
+      frameworkController.selectFrame(4);
     })
   ],
 );

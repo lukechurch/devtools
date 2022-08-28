@@ -438,13 +438,10 @@ class MemoryController extends DisposableController
     _treeMapVisible.value = value;
   }
 
-  ValueListenable get snapshotButtonHighlighted => _snapshotButtonHighlighted;
-
   final _snapshotButtonHighlighted = ValueNotifier<bool>(false);
-
-  void toggleSnapshotButtonHighlighted(bool value) {
-    _snapshotButtonHighlighted.value = value;
-  }
+  ValueListenable get snapshotButtonHighlighted => _snapshotButtonHighlighted;
+  void toggleSnapshotButtonHighlighted(bool value) =>
+      _snapshotButtonHighlighted.value = value;
 
   bool isAnalyzeButtonEnabled() => computeSnapshotToAnalyze != null;
 
