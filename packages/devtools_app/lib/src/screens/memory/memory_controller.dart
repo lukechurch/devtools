@@ -7,9 +7,7 @@ import 'dart:async';
 import 'package:collection/collection.dart' show IterableExtension;
 import 'package:devtools_shared/devtools_shared.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 import 'package:vm_service/vm_service.dart';
 
 import '../../analytics/analytics.dart' as ga;
@@ -18,18 +16,17 @@ import '../../config_specific/file/file.dart';
 import '../../config_specific/logger/logger.dart';
 import '../../primitives/auto_dispose.dart';
 import '../../primitives/utils.dart';
+import '../../service/service_extensions.dart';
 import '../../service/service_manager.dart';
 import '../../shared/globals.dart';
 import '../../shared/table.dart';
 import '../../shared/table_data.dart';
 import '../../shared/utils.dart';
 import '../../ui/search.dart';
-import 'memory_android_chart.dart';
-import 'memory_events_pane.dart';
 import 'memory_graph_model.dart';
 import 'memory_protocol.dart';
 import 'memory_snapshot_models.dart';
-import 'memory_vm_chart.dart';
+import 'panes/allocation_profile/allocation_profile_table_view_controller.dart';
 import 'primitives/filter_config.dart';
 import 'primitives/memory_timeline.dart';
 
@@ -230,37 +227,6 @@ class AllocationSamples {
   }
 }
 
-mixin MemoryControllerMixin<T extends StatefulWidget> on State<T> {
-  MemoryController get memoryController => _memoryController!;
-  MemoryController? _memoryController;
-
-  /// Initializes the controller if needed and returns `true` if it was needed.
-  bool initMemoryController() {
-    final newController = Provider.of<MemoryController>(context);
-    if (newController == _memoryController) return false;
-    _memoryController = newController;
-    return true;
-  }
-}
-
-class ChartControllers {
-  ChartControllers({
-    required this.event,
-    required this.vm,
-    required this.android,
-  });
-
-  final EventChartController event;
-  final VMChartController vm;
-  final AndroidChartController android;
-
-  void resetAll() {
-    event.reset();
-    vm.reset();
-    android.reset();
-  }
-}
-
 /// This class contains the business logic for [memory.dart].
 ///
 /// This class must not have direct dependencies on dart:html. This allows tests
@@ -273,7 +239,23 @@ class MemoryController extends DisposableController
   MemoryController() {
     memoryTimeline = MemoryTimeline(offline);
     memoryLog = MemoryLog(this);
+
+    // Update the chart when the memorySource changes.
+    addAutoDisposeListener(memorySourceNotifier, () async {
+      try {
+        await updatedMemorySource();
+      } catch (e) {
+        final errorMessage = '$e';
+        memorySource = MemoryController.liveFeed;
+        notificationService.push(errorMessage);
+      }
+
+      refreshAllCharts();
+    });
   }
+
+  /// Controller for [AllocationProfileTableView].
+  final allocationProfileController = AllocationProfileTableViewController();
 
   static const logFilenamePrefix = 'memory_log_';
 
@@ -292,6 +274,9 @@ class MemoryController extends DisposableController
 
   final _advancedSettingsEnabled =
       ValueNotifier<bool>(advancedSettingsEnabledDefault);
+
+  ValueListenable<bool> get autoSnapshotEnabled => _autoSnapshotEnabled;
+  final _autoSnapshotEnabled = ValueNotifier<bool>(false);
 
   // Memory statistics displayed as raw numbers or units (KB, MB, GB).
   static const unitDisplayedDefault = true;
@@ -312,6 +297,9 @@ class MemoryController extends DisposableController
   /// Notifies that the source of the memory feed has changed.
   ValueListenable<DateTime?> get selectedSnapshotNotifier =>
       _selectedSnapshotNotifier;
+
+  final _shouldShowLeaksTab = ValueNotifier<bool>(false);
+  ValueListenable<bool> get shouldShowLeaksTab => _shouldShowLeaksTab;
 
   static String formattedTimestamp(DateTime? timestamp) =>
       timestamp != null ? DateFormat('MMM dd HH:mm:ss').format(timestamp) : '';
@@ -597,7 +585,7 @@ class MemoryController extends DisposableController
   final SettingsModel settings = SettingsModel();
 
   final selectionSnapshotNotifier =
-      ValueNotifier<Selection<Reference>>(Selection<Reference>());
+      ValueNotifier<Selection<Reference>>(Selection.empty());
 
   /// Tree to view Libary/Class/Instance (grouped by)
   late TreeTable<Reference> groupByTreeTable;
@@ -631,7 +619,7 @@ class MemoryController extends DisposableController
 
       final classRef = foundClass.classRef;
       _setTracking(classRef, enable).catchError((e) {
-        debugLogger('ERROR: ${e.message}');
+        debugLogger('ERROR: ${e.tooltip}');
       }).whenComplete(
         () {
           changeStackTraces();
@@ -830,7 +818,15 @@ class MemoryController extends DisposableController
     // TODO(terry): Need an event on the controller for this too?
   }
 
-  void _handleConnectionStart(ServiceConnectionManager serviceManager) {
+  void _refreshShouldShowLeaksTab() {
+    _shouldShowLeaksTab.value = serviceManager.serviceExtensionManager
+        .hasServiceExtension(memoryLeakTracking)
+        .value;
+  }
+
+  void _handleConnectionStart(ServiceConnectionManager serviceManager) async {
+    _refreshShouldShowLeaksTab();
+
     _memoryTracker = MemoryTracker(this);
     _memoryTracker!.start();
 
@@ -916,14 +912,6 @@ class MemoryController extends DisposableController
     }
     autoDisposeStreamSubscription(
       serviceManager.onConnectionClosed.listen(_handleConnectionStop),
-    );
-  }
-
-  Future<HeapSnapshotGraph?> snapshotMemory() async {
-    if (serviceManager.isolateManager.selectedIsolate.value == null)
-      return null;
-    return await serviceManager.service?.getHeapSnapshotGraph(
-      serviceManager.isolateManager.selectedIsolate.value!,
     );
   }
 

@@ -11,7 +11,7 @@ import '../../charts/flame_chart.dart';
 import '../../primitives/auto_dispose_mixin.dart';
 import '../../shared/common_widgets.dart';
 import '../../shared/dialogs.dart';
-import '../../shared/notifications.dart';
+import '../../shared/globals.dart';
 import '../../shared/theme.dart';
 import '../../shared/utils.dart';
 import '../../ui/colors.dart';
@@ -303,7 +303,6 @@ class _CpuProfilerState extends State<CpuProfiler>
         builder: (context, constraints) {
           return CpuProfileFlameChart(
             data: data,
-            controller: widget.controller,
             width: constraints.maxWidth,
             height: constraints.maxHeight,
             selectionNotifier: widget.controller.selectedCpuStackFrameNotifier,
@@ -389,8 +388,8 @@ class CpuProfilerDisabled extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: ElevatedButton(
-              child: const Text('Enable profiler'),
               onPressed: controller.enableCpuProfiler,
+              child: const Text('Enable profiler'),
             ),
           ),
         ],
@@ -463,7 +462,7 @@ class UserTagDropdown extends StatelessWidget {
     try {
       await controller.loadDataWithTag(newTag);
     } catch (e) {
-      Notifications.of(context)!.push(e.toString());
+      notificationService.push(e.toString());
     }
   }
 }

@@ -10,13 +10,13 @@ import 'package:provider/provider.dart';
 
 import '../../analytics/analytics.dart' as ga;
 import '../../analytics/constants.dart' as analytics_constants;
+import '../../framework/scaffold.dart';
 import '../../primitives/auto_dispose_mixin.dart';
 import '../../primitives/flutter_widgets/linked_scroll_controller.dart';
 import '../../primitives/utils.dart';
 import '../../shared/banner_messages.dart';
 import '../../shared/common_widgets.dart';
 import '../../shared/globals.dart';
-import '../../shared/scaffold.dart';
 import '../../shared/theme.dart';
 import '../../shared/utils.dart';
 import '../../ui/colors.dart';
@@ -25,6 +25,7 @@ import '../../ui/utils.dart';
 import 'performance_controller.dart';
 import 'performance_model.dart';
 import 'performance_screen.dart';
+import 'performance_utils.dart';
 
 // Turn this flag on to see when flutter frames are linked with timeline events.
 bool debugFrames = false;
@@ -46,7 +47,9 @@ class FlutterFramesChart extends StatefulWidget {
 }
 
 class _FlutterFramesChartState extends State<FlutterFramesChart>
-    with AutoDisposeMixin, PerformanceControllerMixin {
+    with
+        AutoDisposeMixin,
+        ProvidedControllerMixin<PerformanceController, FlutterFramesChart> {
   static const _defaultFrameWidthWithPadding =
       FlutterFramesChartItem.defaultFrameWidth + densePadding * 2;
 
@@ -98,13 +101,13 @@ class _FlutterFramesChartState extends State<FlutterFramesChart>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!initPerformanceController()) return;
+    if (!initController()) return;
 
     cancelListeners();
-    _selectedFrame = performanceController.selectedFrame.value;
-    addAutoDisposeListener(performanceController.selectedFrame, () {
+    _selectedFrame = controller.selectedFrame.value;
+    addAutoDisposeListener(controller.selectedFrame, () {
       setState(() {
-        _selectedFrame = performanceController.selectedFrame.value;
+        _selectedFrame = controller.selectedFrame.value;
       });
     });
 
@@ -220,7 +223,7 @@ class _FlutterFramesChartState extends State<FlutterFramesChart>
                 itemCount: widget.frames.length,
                 itemExtent: _defaultFrameWidthWithPadding,
                 itemBuilder: (context, index) => FlutterFramesChartItem(
-                  controller: performanceController,
+                  controller: controller,
                   frame: widget.frames[index],
                   selected: widget.frames[index] == _selectedFrame,
                   msPerPx: _msPerPx,

@@ -6,6 +6,7 @@ import 'package:devtools_app/src/config_specific/ide_theme/ide_theme.dart';
 import 'package:devtools_app/src/screens/inspector/inspector_screen.dart';
 import 'package:devtools_app/src/screens/inspector/inspector_service.dart';
 import 'package:devtools_app/src/shared/globals.dart';
+import 'package:devtools_app/src/shared/notifications.dart';
 import 'package:devtools_test/devtools_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -47,6 +48,7 @@ void main() async {
   };
 
   setGlobal(IdeTheme, IdeTheme());
+  setGlobal(NotificationService, NotificationService());
 
   group('screenshot tests', () {
     tearDownAll(() async {
@@ -66,7 +68,7 @@ void main() async {
       await tester.pump(const Duration(seconds: 1));
       final InspectorScreenBodyState state =
           tester.state(find.byType(InspectorScreenBody));
-      final controller = state.inspectorController;
+      final controller = state.controller;
       while (!controller.flutterAppFrameReady) {
         await controller.maybeLoadUI();
         await tester.pumpAndSettle();
@@ -422,7 +424,7 @@ void main() async {
       await tester.pumpAndSettle(const Duration(seconds: 1));
       final InspectorScreenBodyState state =
           tester.state(find.byType(InspectorScreenBody));
-      final controller = state.inspectorController;
+      final controller = state.controller;
       while (!controller.flutterAppFrameReady) {
         await controller.maybeLoadUI();
         await tester.pumpAndSettle();

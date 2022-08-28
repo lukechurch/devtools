@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+@TestOn('vm')
 import 'package:devtools_app/src/config_specific/ide_theme/ide_theme.dart';
 import 'package:devtools_app/src/screens/provider/instance_viewer/instance_details.dart';
 import 'package:devtools_app/src/screens/provider/instance_viewer/instance_providers.dart';
@@ -9,9 +10,9 @@ import 'package:devtools_app/src/screens/provider/provider_list.dart';
 import 'package:devtools_app/src/screens/provider/provider_nodes.dart';
 import 'package:devtools_app/src/screens/provider/provider_screen.dart';
 import 'package:devtools_app/src/service/service_manager.dart';
-@TestOn('vm')
 import 'package:devtools_app/src/shared/banner_messages.dart';
 import 'package:devtools_app/src/shared/globals.dart';
+import 'package:devtools_app/src/shared/notifications.dart';
 import 'package:devtools_test/devtools_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,6 +32,7 @@ void main() {
   setUp(() {
     setGlobal(IdeTheme, getIdeTheme());
     setGlobal(ServiceConnectionManager, FakeServiceManager());
+    setGlobal(NotificationService, NotificationService());
   });
 
   setUp(() {

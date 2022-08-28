@@ -5,6 +5,7 @@
 @TestOn('vm')
 import 'package:devtools_app/src/screens/inspector/diagnostics_node.dart';
 import 'package:devtools_app/src/screens/inspector/inspector_service.dart';
+import 'package:devtools_app/src/screens/inspector/primitives/inspector_common.dart';
 import 'package:devtools_app/src/shared/globals.dart';
 import 'package:devtools_test/devtools_test.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -79,7 +80,7 @@ void main() async {
         final group = inspectorServiceLocal.createObjectGroup('test-group');
         // These tests are moot if widget creation is not tracked.
         expect(await inspectorServiceLocal.isWidgetCreationTracked(), isTrue);
-        await inspectorServiceLocal.setPubRootDirectories([]);
+        await inspectorServiceLocal.addPubRootDirectories([]);
         final List<String> rootDirectories =
             await inspectorServiceLocal.inferPubRootDirectoryIfNeeded();
         expect(rootDirectories.length, 1);
@@ -87,113 +88,148 @@ void main() async {
         await group.dispose();
       });
 
-      test('local classes', () async {
+      test('pub root directory operations', () async {
         await env.setupEnvironment();
         final inspectorServiceLocal = inspectorService!;
+        const testPubRootDirectory = '/alpha/bravo/charlie';
 
-        final group = inspectorServiceLocal.createObjectGroup('test-group');
-        // These tests are moot if widget creation is not tracked.
-        expect(await inspectorServiceLocal.isWidgetCreationTracked(), isTrue);
-        await inspectorServiceLocal.setPubRootDirectories([]);
-        final List<String> rootDirectories =
-            await inspectorServiceLocal.inferPubRootDirectoryIfNeeded();
-        expect(rootDirectories.length, 1);
-        expect(rootDirectories.first, endsWith('/fixtures/flutter_app'));
-        final originalRootDirectories = rootDirectories.toList();
-        try {
-          expect(
-            (inspectorServiceLocal.localClasses.keys.toList()..sort()),
-            equals(
-              [
-                'AnotherClass',
-                'ExportedClass',
-                'FooClass',
-                'MyApp',
-                'MyOtherWidget',
-                'NotAWidget',
-                '_PrivateClass',
-                '_PrivateExportedClass',
-              ],
-            ),
-          );
+        // Empty the pubroot directories.
+        final initialPubRootDirectories =
+            await inspectorServiceLocal.getPubRootDirectories();
+        await inspectorServiceLocal
+            .removePubRootDirectories(initialPubRootDirectories!);
+        expect(await inspectorServiceLocal.getPubRootDirectories(), equals([]));
 
-          await inspectorServiceLocal
-              .setPubRootDirectories(['${rootDirectories.first}/lib/src']);
-          // Adding src does not change the directory as local classes are
-          // computed at the library level.
-          expect(
-            (inspectorServiceLocal.localClasses.keys.toList()..sort()),
-            equals(
-              [
-                'AnotherClass',
-                'ExportedClass',
-                'FooClass',
-                'MyApp',
-                'MyOtherWidget',
-                'NotAWidget',
-                '_PrivateClass',
-                '_PrivateExportedClass'
-              ],
-            ),
-          );
+        // Can add a new pub root directory.
+        await inspectorServiceLocal
+            .addPubRootDirectories([testPubRootDirectory]);
+        expect(
+          await inspectorServiceLocal.getPubRootDirectories(),
+          equals([
+            testPubRootDirectory,
+          ]),
+        );
 
-          expect(
-            inspectorServiceLocal.rootPackages.toList(),
-            equals(['flutter_app']),
-          );
-          expect(inspectorServiceLocal.rootPackagePrefixes.toList(), isEmpty);
-
-          await inspectorServiceLocal.setPubRootDirectories(
-            ['/usr/jacobr/foo/lib', '/usr/jacobr/bar/lib/bla'],
-          );
-          expect(
-            inspectorServiceLocal.rootPackages.toList(),
-            equals(['foo', 'bar']),
-          );
-          expect(inspectorServiceLocal.rootPackagePrefixes.toList(), isEmpty);
-
-          expect(
-            inspectorServiceLocal.isLocalUri('package:foo/src/bar.dart'),
-            isTrue,
-          );
-          expect(
-            inspectorServiceLocal.isLocalUri('package:foo.bla/src/bar.dart'),
-            isFalse,
-          );
-          expect(
-            inspectorServiceLocal.isLocalUri('package:foos/src/bar.dart'),
-            isFalse,
-          );
-          expect(
-            inspectorServiceLocal.isLocalUri('package:bar/src/bar.dart'),
-            isTrue,
-          );
-          expect(
-            inspectorServiceLocal.isLocalUri(
-              'package:bar.core/src/bar.dart',
-            ),
-            isFalse,
-          );
-          expect(
-            inspectorServiceLocal.isLocalUri(
-              'package:bar.core.bla/src/bar.dart',
-            ),
-            isFalse,
-          );
-          expect(
-            inspectorServiceLocal.isLocalUri(
-              'package:bar.cores/src/bar.dart',
-            ),
-            isFalse,
-          );
-        } finally {
-          // Restore.
-          await inspectorServiceLocal
-              .setPubRootDirectories(originalRootDirectories);
-
-          await group.dispose();
-        }
+        // Can remove the new pub root directory.
+        await inspectorServiceLocal
+            .removePubRootDirectories([testPubRootDirectory]);
+        expect(
+          await inspectorServiceLocal.getPubRootDirectories(),
+          equals([]),
+        );
       });
+
+      test(
+        'local classes',
+        () async {
+          await env.setupEnvironment();
+          final inspectorServiceLocal = inspectorService!;
+
+          final group = inspectorServiceLocal.createObjectGroup('test-group');
+          // These tests are moot if widget creation is not tracked.
+          expect(await inspectorServiceLocal.isWidgetCreationTracked(), isTrue);
+          await inspectorServiceLocal.addPubRootDirectories([]);
+          final List<String> rootDirectories =
+              await inspectorServiceLocal.inferPubRootDirectoryIfNeeded();
+          expect(rootDirectories.length, 1);
+          expect(rootDirectories.first, endsWith('/fixtures/flutter_app'));
+          final originalRootDirectories = rootDirectories.toList();
+          try {
+            expect(
+              (inspectorServiceLocal.localClasses.keys.toList()..sort()),
+              equals(
+                [
+                  'AnotherClass',
+                  'ExportedClass',
+                  'FooClass',
+                  'MyApp',
+                  'MyOtherWidget',
+                  'NotAWidget',
+                  '_PrivateClass',
+                  '_PrivateExportedClass',
+                ],
+              ),
+            );
+
+            await inspectorServiceLocal
+                .addPubRootDirectories(['${rootDirectories.first}/lib/src']);
+            // Adding src does not change the directory as local classes are
+            // computed at the library level.
+            expect(
+              (inspectorServiceLocal.localClasses.keys.toList()..sort()),
+              equals(
+                [
+                  'AnotherClass',
+                  'ExportedClass',
+                  'FooClass',
+                  'MyApp',
+                  'MyOtherWidget',
+                  'NotAWidget',
+                  '_PrivateClass',
+                  '_PrivateExportedClass'
+                ],
+              ),
+            );
+
+            expect(
+              inspectorServiceLocal.rootPackages.toList(),
+              equals(['flutter_app']),
+            );
+            expect(inspectorServiceLocal.rootPackagePrefixes.toList(), isEmpty);
+
+            await inspectorServiceLocal.addPubRootDirectories(
+              ['/usr/jacobr/foo/lib', '/usr/jacobr/bar/lib/bla'],
+            );
+            expect(
+              inspectorServiceLocal.rootPackages.toList(),
+              equals(['foo', 'bar']),
+            );
+            expect(inspectorServiceLocal.rootPackagePrefixes.toList(), isEmpty);
+
+            expect(
+              inspectorServiceLocal.isLocalUri('package:foo/src/bar.dart'),
+              isTrue,
+            );
+            expect(
+              inspectorServiceLocal.isLocalUri('package:foo.bla/src/bar.dart'),
+              isFalse,
+            );
+            expect(
+              inspectorServiceLocal.isLocalUri('package:foos/src/bar.dart'),
+              isFalse,
+            );
+            expect(
+              inspectorServiceLocal.isLocalUri('package:bar/src/bar.dart'),
+              isTrue,
+            );
+            expect(
+              inspectorServiceLocal.isLocalUri(
+                'package:bar.core/src/bar.dart',
+              ),
+              isFalse,
+            );
+            expect(
+              inspectorServiceLocal.isLocalUri(
+                'package:bar.core.bla/src/bar.dart',
+              ),
+              isFalse,
+            );
+            expect(
+              inspectorServiceLocal.isLocalUri(
+                'package:bar.cores/src/bar.dart',
+              ),
+              isFalse,
+            );
+          } finally {
+            // Restore.
+            await inspectorServiceLocal
+                .addPubRootDirectories(originalRootDirectories);
+
+            await group.dispose();
+          }
+        },
+        skip: true, // TODO(https://github.com/flutter/devtools/issues/4393)
+      );
 
       test('local classes for bazel projects', () async {
         await env.setupEnvironment();
@@ -202,12 +238,12 @@ void main() async {
         final group = inspectorServiceLocal.createObjectGroup('test-group');
         // These tests are moot if widget creation is not tracked.
         expect(await inspectorServiceLocal.isWidgetCreationTracked(), isTrue);
-        await inspectorServiceLocal.setPubRootDirectories([]);
+        await inspectorServiceLocal.addPubRootDirectories([]);
         final originalRootDirectories =
             (await inspectorServiceLocal.inferPubRootDirectoryIfNeeded())
                 .toList();
         try {
-          await inspectorServiceLocal.setPubRootDirectories(
+          await inspectorServiceLocal.addPubRootDirectories(
             ['/usr/me/clients/google3/foo/bar/baz/lib/src/bla'],
           );
           expect(
@@ -219,7 +255,7 @@ void main() async {
             equals(['foo.bar.baz.']),
           );
 
-          await inspectorServiceLocal.setPubRootDirectories([
+          await inspectorServiceLocal.addPubRootDirectories([
             '/usr/me/clients/google3/foo/bar/baz/lib/src/bla',
             '/usr/me/clients/google3/foo/core/lib'
           ]);
@@ -237,7 +273,7 @@ void main() async {
           );
 
           // Test bazel directories without a lib directory.
-          await inspectorServiceLocal.setPubRootDirectories([
+          await inspectorServiceLocal.addPubRootDirectories([
             '/usr/me/clients/google3/foo/bar/baz',
             '/usr/me/clients/google3/foo/core/'
           ]);
@@ -253,7 +289,7 @@ void main() async {
               ['foo.bar.baz.', 'foo.core.'],
             ),
           );
-          await inspectorServiceLocal.setPubRootDirectories([
+          await inspectorServiceLocal.addPubRootDirectories([
             '/usr/me/clients/google3/third_party/dart/foo/lib/src/bla',
             '/usr/me/clients/google3/third_party/dart_src/bar/core/lib'
           ]);
@@ -298,7 +334,7 @@ void main() async {
             isFalse,
           );
 
-          await inspectorServiceLocal.setPubRootDirectories([
+          await inspectorServiceLocal.addPubRootDirectories([
             '/usr/me/clients/google3/third_party/dart/foo',
             '/usr/me/clients/google3/third_party/dart_src/bar/core'
           ]);
@@ -313,7 +349,7 @@ void main() async {
         } finally {
           // Restore.
           await inspectorServiceLocal
-              .setPubRootDirectories(originalRootDirectories);
+              .addPubRootDirectories(originalRootDirectories);
 
           await group.dispose();
         }
@@ -371,6 +407,7 @@ void main() async {
         );
 
         nodeInDetailsTree = (await group.getDetailsSubtree(nodeInSummaryTree))!;
+
         expect(
           treeToDebugString(nodeInDetailsTree),
           anyOf(
@@ -388,6 +425,7 @@ void main() async {
             ),
           ),
         );
+
         expect(nodeInDetailsTree.valueRef, equals(nodeInSummaryTree.valueRef));
 
         await group.setSelectionInspector(nodeInDetailsTree.valueRef, true);
@@ -414,7 +452,7 @@ void main() async {
         ))!;
         expect(
           treeToDebugString(selection),
-          equalsIgnoringHashCodes(
+          equalsGoldenValueIgnoringHashCodes(
             'RenderParagraph#00000 relayoutBoundary=up2\n'
             ' └─text: TextSpan\n',
           ),

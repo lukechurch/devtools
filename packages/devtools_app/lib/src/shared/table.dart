@@ -4,6 +4,7 @@
 
 import 'dart:math';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' hide TableRow;
 import 'package:flutter/services.dart';
@@ -15,6 +16,7 @@ import '../primitives/trees.dart';
 import '../primitives/utils.dart';
 import '../ui/colors.dart';
 import '../ui/search.dart';
+import '../ui/utils.dart';
 import 'collapsible_mixin.dart';
 import 'common_widgets.dart';
 import 'table_data.dart';
@@ -31,12 +33,17 @@ import 'utils.dart';
 /// height of 0 and a height of [defaultRowHeight].
 double get defaultRowHeight => scaleByFontFactor(32.0);
 
-typedef IndexedScrollableWidgetBuilder = Widget Function(
-  BuildContext,
-  LinkedScrollControllerGroup linkedScrollControllerGroup,
-  int index,
-  List<double> columnWidths,
-);
+const _columnGroupSpacing = 4.0;
+const _columnGroupSpacingWithPadding = _columnGroupSpacing + 2 * defaultSpacing;
+const _columnSpacing = defaultSpacing;
+
+typedef IndexedScrollableWidgetBuilder = Widget Function({
+  required BuildContext context,
+  required LinkedScrollControllerGroup linkedScrollControllerGroup,
+  required int index,
+  required List<double> columnWidths,
+  required bool isPinned,
+});
 
 typedef TableKeyEventHandler = KeyEventResult Function(
   RawKeyEvent event,
@@ -44,7 +51,25 @@ typedef TableKeyEventHandler = KeyEventResult Function(
   BoxConstraints constraints,
 );
 
-enum ScrollKind { up, down, parent }
+enum ScrollKind {
+  up,
+  down,
+  parent,
+}
+
+/// Represents the various pinning modes for [FlatTable]:
+///
+///   - [FlatTablePinBehavior.none] disables item pinning
+///   - [FlatTablePinBehavior.pinOriginalToTop] moves the original item from
+///     the list of unpinned items to the list of pinned items.
+///   - [FlatTablePinBehavior.pinCopyToTop] creates a copy of the original item
+///     and inserts it into the list of pinned items, leaving the original item
+///     in the list of unpinned items.
+enum FlatTablePinBehavior {
+  none,
+  pinOriginalToTop,
+  pinCopyToTop,
+}
 
 /// A table that displays in a collection of [data], based on a collection of
 /// [ColumnData].
@@ -55,12 +80,14 @@ class FlatTable<T> extends StatefulWidget {
   const FlatTable({
     Key? key,
     required this.columns,
+    this.columnGroups,
     required this.data,
     this.autoScrollContent = false,
     required this.keyFactory,
     required this.onItemSelected,
     required this.sortColumn,
     required this.sortDirection,
+    this.pinBehavior = FlatTablePinBehavior.none,
     this.secondarySortColumn,
     this.onSortChanged,
     this.searchMatchesNotifier,
@@ -69,6 +96,8 @@ class FlatTable<T> extends StatefulWidget {
   }) : super(key: key);
 
   final List<ColumnData<T>> columns;
+
+  final List<ColumnGroup>? columnGroups;
 
   final List<T> data;
 
@@ -79,6 +108,11 @@ class FlatTable<T> extends StatefulWidget {
   final Key Function(T data) keyFactory;
 
   final ItemCallback<T> onItemSelected;
+
+  /// Determines how elements that request to be pinned are displayed.
+  ///
+  /// Defaults to [FlatTablePinBehavior.none], which disables pinnning.
+  final FlatTablePinBehavior pinBehavior;
 
   final ColumnData<T> sortColumn;
 
@@ -98,8 +132,6 @@ class FlatTable<T> extends StatefulWidget {
 
   final ValueListenable<T?>? selectionNotifier;
 
-  int get numSpacers => max(0, columns.length - 1);
-
   @override
   FlatTableState<T> createState() => FlatTableState<T>();
 }
@@ -107,11 +139,16 @@ class FlatTable<T> extends StatefulWidget {
 class FlatTableState<T> extends State<FlatTable<T>>
     implements SortableTable<T> {
   late List<T> data;
+  late List<T> pinnedData;
+  late UnmodifiableListView<T> _originalData;
 
   @override
   void initState() {
     super.initState();
-
+    if (widget.pinBehavior != FlatTablePinBehavior.none &&
+        this is! State<FlatTable<PinnableListEntry>>) {
+      throw StateError('$T must implement PinnableListEntry');
+    }
     _initData();
   }
 
@@ -126,7 +163,7 @@ class FlatTableState<T> extends State<FlatTable<T>>
   }
 
   void _initData() {
-    data = List.from(widget.data);
+    _originalData = UnmodifiableListView(List.from(widget.data));
     sortData(
       widget.sortColumn,
       widget.sortDirection,
@@ -138,9 +175,11 @@ class FlatTableState<T> extends State<FlatTable<T>>
   List<double> computeColumnWidths(double maxWidth) {
     // Subtract width from outer padding around table.
     maxWidth -= 2 * defaultSpacing;
-    maxWidth -= widget.numSpacers * defaultSpacing;
+    final numColumnGroupSpacers = widget.columnGroups?.numSpacers ?? 0;
+    final numColumnSpacers = widget.columns.numSpacers - numColumnGroupSpacers;
+    maxWidth -= numColumnSpacers * _columnSpacing;
+    maxWidth -= numColumnGroupSpacers * _columnGroupSpacingWithPadding;
     maxWidth = max(0, maxWidth);
-
     double available = maxWidth;
     // Columns sorted by increasing minWidth.
     final List<ColumnData<T>> sortedColumns = widget.columns.toList()
@@ -226,7 +265,9 @@ class FlatTableState<T> extends State<FlatTable<T>>
 
         return _Table<T>(
           data: data,
+          pinnedData: pinnedData,
           columns: widget.columns,
+          columnGroups: widget.columnGroups,
           columnWidths: columnWidths,
           autoScrollContent: widget.autoScrollContent,
           rowBuilder: _buildRow,
@@ -235,19 +276,20 @@ class FlatTableState<T> extends State<FlatTable<T>>
           secondarySortColumn: widget.secondarySortColumn,
           onSortChanged: _sortDataAndUpdate,
           activeSearchMatchNotifier: widget.activeSearchMatchNotifier,
+          rowItemExtent: defaultRowHeight,
         );
       },
     );
   }
 
-  Widget _buildRow(
-    BuildContext context,
-    LinkedScrollControllerGroup linkedScrollControllerGroup,
-    int index,
-    List<double> columnWidths,
-  ) {
-    final node = data[index];
-
+  Widget _buildRow({
+    required BuildContext context,
+    required LinkedScrollControllerGroup linkedScrollControllerGroup,
+    required int index,
+    required List<double> columnWidths,
+    required bool isPinned,
+  }) {
+    final node = (isPinned ? pinnedData : data)[index];
     final selectionNotifier =
         widget.selectionNotifier ?? FixedValueListenable<T?>(null);
     return ValueListenableBuilder<T?>(
@@ -259,6 +301,7 @@ class FlatTableState<T> extends State<FlatTable<T>>
           node: node,
           onPressed: widget.onItemSelected,
           columns: widget.columns,
+          columnGroups: widget.columnGroups,
           columnWidths: columnWidths,
           backgroundColor: alternatingColorForIndex(
             index,
@@ -295,6 +338,8 @@ class FlatTableState<T> extends State<FlatTable<T>>
     SortDirection direction, {
     ColumnData<T>? secondarySortColumn,
   }) {
+    data = List.from(_originalData);
+    pinnedData = <T>[];
     data.sort(
       (T a, T b) => _compareData<T>(
         a,
@@ -304,6 +349,22 @@ class FlatTableState<T> extends State<FlatTable<T>>
         secondarySortColumn: secondarySortColumn,
       ),
     );
+    if (widget.pinBehavior != FlatTablePinBehavior.none) {
+      // Collect the list of pinned entries. We don't need to sort again since
+      // we've already sorted the original data.
+      final dataCopy = <T>[];
+      for (final entry in data) {
+        final pinnableEntry = entry as PinnableListEntry;
+        if (pinnableEntry.pinToTop) {
+          pinnedData.add(entry);
+        }
+        if (!pinnableEntry.pinToTop ||
+            widget.pinBehavior == FlatTablePinBehavior.pinCopyToTop) {
+          dataCopy.add(entry);
+        }
+      }
+      data = dataCopy;
+    }
   }
 }
 
@@ -311,11 +372,20 @@ class Selection<T> {
   Selection({
     this.node,
     this.nodeIndex,
+    this.nodeIndexCalculator,
     this.scrollIntoView = false,
-  });
+  }) : assert(nodeIndex == null || nodeIndexCalculator == null);
+
+  Selection.empty()
+      : node = null,
+        nodeIndex = null,
+        nodeIndexCalculator = null,
+        scrollIntoView = true;
 
   final T? node;
+  // TODO (carolynqu): get rid of nodeIndex and only use nodeIndexCalculator, https://github.com/flutter/devtools/issues/4266
   final int? nodeIndex;
+  final int Function(T)? nodeIndexCalculator;
   final bool scrollIntoView;
 }
 
@@ -347,6 +417,7 @@ class TreeTable<T extends TreeNode<T>> extends StatefulWidget {
     required this.sortDirection,
     this.secondarySortColumn,
     this.selectionNotifier,
+    this.onSortChanged,
     this.autoExpandRoots = false,
   })  : assert(columns.contains(treeColumn)),
         assert(columns.contains(sortColumn)),
@@ -371,6 +442,12 @@ class TreeTable<T extends TreeNode<T>> extends StatefulWidget {
   final ColumnData<T>? secondarySortColumn;
 
   final ValueNotifier<Selection<T>>? selectionNotifier;
+
+  final Function(
+    ColumnData<T> column,
+    SortDirection direction, {
+    ColumnData<T>? secondarySortColumn,
+  })? onSortChanged;
 
   final bool autoExpandRoots;
 
@@ -398,6 +475,16 @@ class TreeTableState<T extends TreeNode<T>> extends State<TreeTable<T>>
   void initState() {
     super.initState();
     _initData();
+
+    addAutoDisposeListener(selectionNotifier, () {
+      setState(() {
+        final node = selectionNotifier.value.node;
+        if (node != null) {
+          expandParents(node.parent);
+        }
+      });
+    });
+
     rootsExpanded =
         List.generate(dataRoots.length, (index) => dataRoots[index].isExpanded);
     _updateItems();
@@ -423,16 +510,7 @@ class TreeTableState<T extends TreeNode<T>> extends State<TreeTable<T>>
 
     if (widget == oldWidget) return;
 
-    cancelListeners();
-
-    addAutoDisposeListener(selectionNotifier, () {
-      setState(() {
-        final node = selectionNotifier.value.node;
-        expandParents(node?.parent);
-      });
-    });
-
-    if (widget.sortColumn != oldWidget.sortColumn ||
+    if (widget.sortColumn.title != oldWidget.sortColumn.title ||
         widget.sortDirection != oldWidget.sortDirection ||
         !collectionEquals(widget.dataRoots, oldWidget.dataRoots)) {
       _initData();
@@ -445,7 +523,7 @@ class TreeTableState<T extends TreeNode<T>> extends State<TreeTable<T>>
   void _initData() {
     dataRoots = List.generate(widget.dataRoots.length, (index) {
       final root = widget.dataRoots[index];
-      if (widget.autoExpandRoots) {
+      if (widget.autoExpandRoots && !root.isExpanded) {
         root.expand();
       }
       return root;
@@ -457,8 +535,8 @@ class TreeTableState<T extends TreeNode<T>> extends State<TreeTable<T>>
       secondarySortColumn: widget.secondarySortColumn,
     );
 
-    selectionNotifier =
-        widget.selectionNotifier ?? ValueNotifier<Selection<T>>(Selection<T>());
+    selectionNotifier = widget.selectionNotifier ??
+        ValueNotifier<Selection<T>>(Selection.empty());
   }
 
   void _updateItems() {
@@ -574,12 +652,13 @@ class TreeTableState<T extends TreeNode<T>> extends State<TreeTable<T>>
     );
   }
 
-  Widget _buildRow(
-    BuildContext context,
-    LinkedScrollControllerGroup linkedScrollControllerGroup,
-    int index,
-    List<double> columnWidths,
-  ) {
+  Widget _buildRow({
+    required BuildContext context,
+    required LinkedScrollControllerGroup linkedScrollControllerGroup,
+    required int index,
+    required List<double> columnWidths,
+    required bool isPinned,
+  }) {
     Widget rowForNode(T node) {
       node.index = index;
       return TableRow<T>(
@@ -767,6 +846,11 @@ class TreeTableState<T extends TreeNode<T>> extends State<TreeTable<T>>
   }) {
     sortData(column, direction, secondarySortColumn: secondarySortColumn);
     _updateItems();
+    widget.onSortChanged?.call(
+      column,
+      direction,
+      secondarySortColumn: secondarySortColumn,
+    );
   }
 }
 
@@ -776,29 +860,35 @@ class _Table<T> extends StatefulWidget {
   const _Table({
     Key? key,
     required this.data,
+    this.pinnedData = const [],
     required this.columns,
     required this.columnWidths,
     required this.rowBuilder,
     required this.sortColumn,
     required this.sortDirection,
     required this.onSortChanged,
+    this.columnGroups,
     this.secondarySortColumn,
     this.focusNode,
     this.handleKeyEvent,
     this.autoScrollContent = false,
     this.selectionNotifier,
     this.activeSearchMatchNotifier,
+    this.rowItemExtent,
   }) : super(key: key);
 
   final List<T> data;
+  final List<T> pinnedData;
 
   final bool autoScrollContent;
   final List<ColumnData<T>> columns;
+  final List<ColumnGroup>? columnGroups;
   final List<double> columnWidths;
   final IndexedScrollableWidgetBuilder rowBuilder;
   final ColumnData<T> sortColumn;
   final SortDirection sortDirection;
   final ColumnData<T>? secondarySortColumn;
+  final double? rowItemExtent;
   final Function(
     ColumnData<T> column,
     SortDirection direction, {
@@ -812,8 +902,6 @@ class _Table<T> extends StatefulWidget {
   /// The width to assume for columns that don't specify a width.
   static const defaultColumnWidth = 500.0;
 
-  int get numSpacers => max(0, columns.length - 1);
-
   @override
   _TableState<T> createState() => _TableState<T>();
 }
@@ -823,6 +911,9 @@ class _TableState<T> extends State<_Table<T>> with AutoDisposeMixin {
   late ColumnData<T> sortColumn;
   late SortDirection sortDirection;
   late ScrollController scrollController;
+  late ScrollController pinnedScrollController;
+
+  static const double pinnedItemDividerHeight = 5;
 
   @override
   void initState() {
@@ -832,34 +923,33 @@ class _TableState<T> extends State<_Table<T>> with AutoDisposeMixin {
     sortColumn = widget.sortColumn;
     sortDirection = widget.sortDirection;
     scrollController = ScrollController();
-
+    pinnedScrollController = ScrollController();
+    _addScrollListener(widget.selectionNotifier);
     _initSearchListener();
   }
 
-  @override
-  void didUpdateWidget(_Table<T> oldWidget) {
-    super.didUpdateWidget(oldWidget);
+  void _addScrollListener(ValueNotifier<Selection<T>>? selectionNotifier) {
+    if (selectionNotifier != null) {
+      addAutoDisposeListener(selectionNotifier, () {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final Selection<T> selection = selectionNotifier.value;
+          final T? node = selection.node;
+          final int Function(T)? nodeIndexCalculator =
+              selection.nodeIndexCalculator;
+          final int? nodeIndex = selection.nodeIndex;
 
-    cancelListeners();
+          if (selection.scrollIntoView && node != null) {
+            final int selectedDisplayRow = nodeIndexCalculator != null
+                ? nodeIndexCalculator(node)
+                : nodeIndex!;
 
-    // TODO(kenz): pull this code into a helper and also call from initState.
-    // Detect selection changes but only care about scrollIntoView.
-    addAutoDisposeListener(oldWidget.selectionNotifier, () {
-      setState(() {
-        final Selection<T> selection = oldWidget.selectionNotifier!.value;
-        if (selection.scrollIntoView) {
-          final int selectedDisplayRow = (selection.node! as dynamic).nodeIndex;
-          // TODO(terry): Optimize selecting row, if row's visible in
-          //              the viewport just select otherwise jumpTo row.
-          final newPos = selectedDisplayRow * defaultRowHeight;
+            final newPos = selectedDisplayRow * defaultRowHeight;
 
-          // TODO(terry): Should animate factor out _moveSelection to reuse here.
-          scrollController.jumpTo(newPos);
-        }
+            maybeScrollToPosition(scrollController, newPos);
+          }
+        });
       });
-    });
-
-    _initSearchListener();
+    }
   }
 
   void _initSearchListener() {
@@ -895,25 +985,30 @@ class _TableState<T> extends State<_Table<T>> with AutoDisposeMixin {
   @override
   void dispose() {
     scrollController.dispose();
+    pinnedScrollController.dispose();
     super.dispose();
   }
 
   /// The width of all columns in the table, with additional padding.
   double get tableWidth {
     var tableWidth = 2 * defaultSpacing;
-    tableWidth += widget.numSpacers * defaultSpacing;
+    final numColumnGroupSpacers = widget.columnGroups?.numSpacers ?? 0;
+    final numColumnSpacers = widget.columns.numSpacers - numColumnGroupSpacers;
+    tableWidth += numColumnSpacers * _columnSpacing;
+    tableWidth += numColumnGroupSpacers * _columnGroupSpacingWithPadding;
     for (var columnWidth in widget.columnWidths) {
       tableWidth += columnWidth;
     }
     return tableWidth;
   }
 
-  Widget _buildItem(BuildContext context, int index) {
+  Widget _buildItem(BuildContext context, int index, {bool isPinned = false}) {
     return widget.rowBuilder(
-      context,
-      _linkedHorizontalScrollControllerGroup,
-      index,
-      widget.columnWidths,
+      context: context,
+      linkedScrollControllerGroup: _linkedHorizontalScrollControllerGroup,
+      index: index,
+      columnWidths: widget.columnWidths,
+      isPinned: isPinned,
     );
   }
 
@@ -926,6 +1021,8 @@ class _TableState<T> extends State<_Table<T>> with AutoDisposeMixin {
       }
     }
 
+    final columnGroups = widget.columnGroups;
+
     return LayoutBuilder(
       builder: (context, constraints) {
         return SizedBox(
@@ -936,17 +1033,55 @@ class _TableState<T> extends State<_Table<T>> with AutoDisposeMixin {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              TableRow<T>.tableHeader(
+              if (columnGroups != null && columnGroups.isNotEmpty)
+                TableRow<T>.tableColumnGroupHeader(
+                  linkedScrollControllerGroup:
+                      _linkedHorizontalScrollControllerGroup,
+                  columnGroups: columnGroups,
+                  columnWidths: widget.columnWidths,
+                  sortColumn: sortColumn,
+                  sortDirection: sortDirection,
+                  secondarySortColumn: widget.secondarySortColumn,
+                  onSortChanged: _sortData,
+                ),
+              TableRow<T>.tableColumnHeader(
                 key: const Key('Table header'),
                 linkedScrollControllerGroup:
                     _linkedHorizontalScrollControllerGroup,
                 columns: widget.columns,
+                columnGroups: columnGroups,
                 columnWidths: widget.columnWidths,
                 sortColumn: sortColumn,
                 sortDirection: sortDirection,
                 secondarySortColumn: widget.secondarySortColumn,
                 onSortChanged: _sortData,
               ),
+              if (widget.pinnedData.isNotEmpty) ...[
+                SizedBox(
+                  height: min(
+                    widget.rowItemExtent! * widget.pinnedData.length,
+                    constraints.maxHeight / 2,
+                  ),
+                  child: Scrollbar(
+                    thumbVisibility: true,
+                    controller: pinnedScrollController,
+                    child: ListView.builder(
+                      controller: pinnedScrollController,
+                      itemCount: widget.pinnedData.length,
+                      itemExtent: widget.rowItemExtent,
+                      itemBuilder: (context, index) => _buildItem(
+                        context,
+                        index,
+                        isPinned: true,
+                      ),
+                    ),
+                  ),
+                ),
+                const Divider(
+                  thickness: pinnedItemDividerHeight,
+                  height: pinnedItemDividerHeight,
+                ),
+              ],
               Expanded(
                 child: Scrollbar(
                   thumbVisibility: true,
@@ -967,6 +1102,7 @@ class _TableState<T> extends State<_Table<T>> with AutoDisposeMixin {
                       child: ListView.builder(
                         controller: scrollController,
                         itemCount: widget.data.length,
+                        itemExtent: widget.rowItemExtent,
                         itemBuilder: _buildItem,
                       ),
                     ),
@@ -1028,6 +1164,7 @@ class TableRow<T> extends StatefulWidget {
     required this.columns,
     required this.columnWidths,
     required this.onPressed,
+    this.columnGroups,
     this.backgroundColor,
     this.expandableColumn,
     this.expansionChildren,
@@ -1042,15 +1179,17 @@ class TableRow<T> extends StatefulWidget {
         sortDirection = null,
         secondarySortColumn = null,
         onSortChanged = null,
+        rowType = _TableRowType.data,
         super(key: key);
 
   /// Constructs a [TableRow] that presents the column titles instead
   /// of any [node].
-  const TableRow.tableHeader({
+  const TableRow.tableColumnHeader({
     Key? key,
     required this.linkedScrollControllerGroup,
     required this.columns,
     required this.columnWidths,
+    required this.columnGroups,
     required this.sortColumn,
     required this.sortDirection,
     required this.onSortChanged,
@@ -1067,15 +1206,51 @@ class TableRow<T> extends StatefulWidget {
         onExpansionCompleted = null,
         searchMatchesNotifier = null,
         activeSearchMatchNotifier = null,
+        rowType = _TableRowType.columnHeader,
+        super(key: key);
+
+  /// Constructs a [TableRow] that presents column group titles instead of any
+  /// [node].
+  const TableRow.tableColumnGroupHeader({
+    Key? key,
+    required this.linkedScrollControllerGroup,
+    required this.columnGroups,
+    required this.columnWidths,
+    required this.sortColumn,
+    required this.sortDirection,
+    required this.onSortChanged,
+    this.secondarySortColumn,
+    this.onPressed,
+  })  : node = null,
+        isExpanded = false,
+        isExpandable = false,
+        isSelected = false,
+        expandableColumn = null,
+        columns = const [],
+        isShown = true,
+        backgroundColor = null,
+        expansionChildren = null,
+        onExpansionCompleted = null,
+        searchMatchesNotifier = null,
+        activeSearchMatchNotifier = null,
+        rowType = _TableRowType.columnGroupHeader,
         super(key: key);
 
   final LinkedScrollControllerGroup linkedScrollControllerGroup;
 
   final T? node;
+
   final List<ColumnData<T>> columns;
+
+  final List<ColumnGroup>? columnGroups;
+
   final ItemCallback<T>? onPressed;
+
   final List<double> columnWidths;
+
   final bool isSelected;
+
+  final _TableRowType rowType;
 
   /// Which column, if any, should show expansion affordances
   /// and nested rows.
@@ -1124,8 +1299,6 @@ class TableRow<T> extends StatefulWidget {
   final ValueListenable<List<T>>? searchMatchesNotifier;
 
   final ValueListenable<T?>? activeSearchMatchNotifier;
-
-  int get numSpacers => max(0, columns.length - 1);
 
   @override
   _TableRowState<T> createState() => _TableRowState<T>();
@@ -1199,7 +1372,9 @@ class _TableRowState<T> extends State<TableRow<T>>
     );
 
     final box = SizedBox(
-      height: node == null ? areaPaneHeaderHeight : defaultRowHeight,
+      height: widget.rowType == _TableRowType.data
+          ? defaultRowHeight
+          : areaPaneHeaderHeight,
       child: Material(
         color: _searchAwareBackgroundColor(),
         child: onPressed != null
@@ -1302,6 +1477,18 @@ class _TableRowState<T> extends State<TableRow<T>>
     }
   }
 
+  TextAlign _textAlignmentFor(ColumnData<T> column) {
+    switch (column.alignment) {
+      case ColumnAlignment.center:
+        return TextAlign.center;
+      case ColumnAlignment.right:
+        return TextAlign.right;
+      case ColumnAlignment.left:
+      default:
+        return TextAlign.left;
+    }
+  }
+
   MainAxisAlignment _mainAxisAlignmentFor(ColumnData<T> column) {
     switch (column.alignment) {
       case ColumnAlignment.center:
@@ -1319,7 +1506,9 @@ class _TableRowState<T> extends State<TableRow<T>>
     Widget columnFor(ColumnData<T> column, double columnWidth) {
       late Widget content;
       final node = widget.node;
-      if (node == null) {
+      if (widget.rowType == _TableRowType.columnHeader) {
+        // TODO(kenz): clean up and pull all this code into _ColumnHeaderRow
+        // widget class.
         final isSortColumn = column == widget.sortColumn;
 
         final title = Text(
@@ -1330,14 +1519,15 @@ class _TableRowState<T> extends State<TableRow<T>>
         final headerContent = Row(
           mainAxisAlignment: _mainAxisAlignmentFor(column),
           children: [
-            if (isSortColumn)
+            if (isSortColumn && column.supportsSorting) ...[
               Icon(
                 widget.sortDirection == SortDirection.ascending
                     ? Icons.expand_less
                     : Icons.expand_more,
                 size: defaultIconSize,
               ),
-            if (isSortColumn) const SizedBox(width: densePadding),
+              const SizedBox(width: densePadding),
+            ],
             // TODO: This Flexible wrapper was added to get the
             // network_profiler_test.dart tests to pass.
             Flexible(
@@ -1355,14 +1545,18 @@ class _TableRowState<T> extends State<TableRow<T>>
         content = column.includeHeader
             ? InkWell(
                 canRequestFocus: false,
-                onTap: () => _handleSortChange(
-                  column,
-                  secondarySortColumn: widget.secondarySortColumn,
-                ),
+                onTap: column.supportsSorting
+                    ? () => _handleSortChange(
+                          column,
+                          secondarySortColumn: widget.secondarySortColumn,
+                        )
+                    : null,
                 child: headerContent,
               )
             : headerContent;
-      } else {
+      } else if (node != null) {
+        // TODO(kenz): clean up and pull all this code into _ColumnDataRow
+        // widget class.
         final padding = column.getNodeIndentPx(node);
         assert(padding >= 0);
 
@@ -1374,11 +1568,23 @@ class _TableRowState<T> extends State<TableRow<T>>
             onPressed: onPressed,
           );
         } else {
-          content = Text(
-            column.getDisplayValue(node),
-            overflow: TextOverflow.ellipsis,
-            style: contentTextStyle(column),
+          content = RichText(
+            text: TextSpan(
+              text: column.getDisplayValue(node),
+              children: [
+                if (column.getCaption(node) != null)
+                  TextSpan(
+                    text: ' ${column.getCaption(node)}',
+                    style: const TextStyle(
+                      fontStyle: FontStyle.italic,
+                    ),
+                  )
+              ],
+              style: contentTextStyle(column),
+            ),
             maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: _textAlignmentFor(column),
           );
         }
 
@@ -1418,6 +1624,10 @@ class _TableRowState<T> extends State<TableRow<T>>
             child: content,
           ),
         );
+      } else {
+        throw Exception(
+          'Expected a non-null node for this table column, but node == null.',
+        );
       }
 
       content = SizedBox(
@@ -1430,20 +1640,61 @@ class _TableRowState<T> extends State<TableRow<T>>
       return content;
     }
 
+    if (widget.rowType == _TableRowType.columnGroupHeader) {
+      final groups = widget.columnGroups!;
+      return _ColumnGroupHeaderRow(
+        groups: groups,
+        columnWidths: widget.columnWidths,
+        scrollController: scrollController,
+      );
+    }
+
+    final rowDisplayParts = <_TableRowPartDisplayType>[];
+    final groups = widget.columnGroups;
+    if (groups != null && groups.isNotEmpty) {
+      for (int i = 0; i < groups.length; i++) {
+        final groupParts = List.generate(
+          groups[i].range.size as int,
+          (index) => _TableRowPartDisplayType.column,
+        ).joinWith(_TableRowPartDisplayType.columnSpacer);
+        rowDisplayParts.addAll(groupParts);
+        if (i < groups.length - 1) {
+          rowDisplayParts.add(_TableRowPartDisplayType.columnGroupSpacer);
+        }
+      }
+    } else {
+      final parts = List.generate(
+        widget.columns.length,
+        (index) => _TableRowPartDisplayType.column,
+      ).joinWith(_TableRowPartDisplayType.columnSpacer);
+      rowDisplayParts.addAll(parts);
+    }
+
+    var columnIndexTracker = 0;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: defaultSpacing),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         controller: scrollController,
-        itemCount: widget.columns.length + widget.numSpacers,
+        itemCount: widget.columns.length + widget.columns.numSpacers,
         itemBuilder: (context, int i) {
-          if (i % 2 == 1) {
-            return const SizedBox(width: defaultSpacing);
+          final displayTypeForIndex = rowDisplayParts[i];
+          switch (displayTypeForIndex) {
+            case _TableRowPartDisplayType.column:
+              final current = columnIndexTracker;
+              columnIndexTracker++;
+              return columnFor(
+                widget.columns[current],
+                widget.columnWidths[current],
+              );
+            case _TableRowPartDisplayType.columnSpacer:
+              return const SizedBox(
+                width: _columnSpacing,
+                child: VerticalDivider(width: _columnSpacing),
+              );
+            case _TableRowPartDisplayType.columnGroupSpacer:
+              return const _ColumnGroupSpacer();
           }
-          return columnFor(
-            widget.columns[i ~/ 2],
-            widget.columnWidths[i ~/ 2],
-          );
         },
       ),
     );
@@ -1484,6 +1735,100 @@ class _TableRowState<T> extends State<TableRow<T>>
       secondarySortColumn: secondarySortColumn,
     );
   }
+}
+
+class _ColumnGroupHeaderRow extends StatelessWidget {
+  const _ColumnGroupHeaderRow({
+    required this.groups,
+    required this.columnWidths,
+    required this.scrollController,
+    Key? key,
+  }) : super(key: key);
+
+  final List<ColumnGroup> groups;
+
+  final List<double> columnWidths;
+
+  final ScrollController scrollController;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: defaultSpacing),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: defaultBorderSide(Theme.of(context)),
+        ),
+      ),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        controller: scrollController,
+        itemCount: groups.length + groups.numSpacers,
+        itemBuilder: (context, int i) {
+          if (i % 2 == 1) {
+            return const _ColumnGroupSpacer();
+          }
+
+          final group = groups[i ~/ 2];
+          final groupRange = group.range;
+          double groupWidth = 0.0;
+          for (int j = groupRange.begin as int; j < groupRange.end; j++) {
+            final columnWidth = columnWidths[j];
+            groupWidth += columnWidth;
+            if (j < groupRange.end - 1) {
+              groupWidth += _columnSpacing;
+            }
+          }
+          return Container(
+            alignment: Alignment.center,
+            width: groupWidth,
+            child: Text(group.title),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ColumnGroupSpacer extends StatelessWidget {
+  const _ColumnGroupSpacer({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: (_columnGroupSpacingWithPadding - _columnGroupSpacing) / 2,
+      ),
+      child: Container(
+        width: _columnGroupSpacing,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Colors.black,
+              Theme.of(context).focusColor,
+              Colors.black,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+enum _TableRowType {
+  data,
+  columnHeader,
+  columnGroupHeader,
+}
+
+enum _TableRowPartDisplayType {
+  column,
+  columnSpacer,
+  columnGroupSpacer,
+}
+
+extension _TableListExtension<T> on List<T> {
+  int get numSpacers => max(0, length - 1);
 }
 
 abstract class SortableTable<T> {

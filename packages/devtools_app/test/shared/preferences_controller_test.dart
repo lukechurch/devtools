@@ -4,13 +4,17 @@
 
 import 'package:devtools_app/src/config_specific/ide_theme/ide_theme.dart';
 import 'package:devtools_app/src/primitives/storage.dart';
+import 'package:devtools_app/src/service/service_manager.dart';
 import 'package:devtools_app/src/shared/globals.dart';
 import 'package:devtools_app/src/shared/preferences.dart';
+import 'package:devtools_test/devtools_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../test_infra/flutter_test_storage.dart';
 
 void main() {
+  setGlobal(ServiceConnectionManager, FakeServiceManager());
+
   group('PreferencesController', () {
     late PreferencesController controller;
 
@@ -76,7 +80,7 @@ void main() {
 
       group('init', () {
         setUp(() {
-          controller.toggleHoverEvalMode(false);
+          controller.setHoverEvalMode(false);
         });
 
         test('enables hover mode by default', () async {
@@ -100,7 +104,7 @@ void main() {
           valueChanged = true;
         });
 
-        controller.toggleHoverEvalMode(newHoverModeValue);
+        controller.setHoverEvalMode(newHoverModeValue);
 
         final storedHoverModeValue =
             await storage.getValue('inspector.hoverEvalMode');
@@ -111,6 +115,8 @@ void main() {
           newHoverModeValue.toString(),
         );
       });
+      // TODO(https://github.com/flutter/devtools/issues/4342): make inspector
+      // preferences testable, then test it
     });
   });
 }

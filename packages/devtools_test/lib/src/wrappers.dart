@@ -52,6 +52,7 @@ Widget wrapWithAnalytics(
 
 Widget wrapWithControllers(
   Widget widget, {
+  InspectorController? inspector,
   LoggingController? logging,
   MemoryController? memory,
   PerformanceController? performance,
@@ -61,11 +62,14 @@ Widget wrapWithControllers(
   BannerMessagesController? bannerMessages,
   AppSizeController? appSize,
   AnalyticsController? analytics,
+  VMDeveloperToolsController? vmDeveloperTools,
 }) {
   final _providers = [
     Provider<BannerMessagesController>.value(
       value: bannerMessages ?? MockBannerMessagesController(),
     ),
+    if (inspector != null)
+      Provider<InspectorController>.value(value: inspector),
     if (logging != null) Provider<LoggingController>.value(value: logging),
     if (memory != null) Provider<MemoryController>.value(value: memory),
     if (performance != null)
@@ -77,6 +81,8 @@ Widget wrapWithControllers(
     if (appSize != null) Provider<AppSizeController>.value(value: appSize),
     if (analytics != null)
       Provider<AnalyticsController>.value(value: analytics),
+    if (vmDeveloperTools != null)
+      Provider<VMDeveloperToolsController>.value(value: vmDeveloperTools),
   ];
   return wrap(
     wrapWithNotifications(
@@ -89,14 +95,19 @@ Widget wrapWithControllers(
 }
 
 Widget wrapWithNotifications(Widget child) {
-  return Notifications(child: child);
+  return NotificationsView(child: child);
 }
 
 Widget wrapWithInspectorControllers(Widget widget) {
+  final inspectorController = InspectorController(
+    inspectorTree: InspectorTreeController(),
+    detailsTree: InspectorTreeController(),
+    treeType: FlutterTreeType.widget,
+  );
   return wrapWithControllers(
     widget,
     debugger: DebuggerController(),
-    // TODO(jacobr): add inspector controllers.
+    inspector: inspectorController,
   );
 }
 
@@ -153,15 +164,4 @@ Future<void> _setWindowSize(Size windowSize) async {
 
 Future<void> _resetWindowSize() async {
   await _setWindowSize(const Size(800.0, 600.0));
-}
-
-/// A test-friendly [NotificationService] that can be run in unit tests
-/// instead of widget tests.
-class TestNotifications implements NotificationService {
-  final List<String> messages = [];
-
-  @override
-  void push(String message) {
-    messages.add(message);
-  }
 }

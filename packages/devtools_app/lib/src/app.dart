@@ -13,7 +13,14 @@ import 'analytics/analytics_controller.dart';
 import 'analytics/constants.dart' as analytics_constants;
 import 'config_specific/server/server.dart';
 import 'example/conditional_screen.dart';
+import 'framework/about_dialog.dart';
 import 'framework/framework_core.dart';
+import 'framework/initializer.dart';
+import 'framework/landing_screen.dart';
+import 'framework/notifications_view.dart';
+import 'framework/release_notes/release_notes.dart';
+import 'framework/report_feedback_button.dart';
+import 'framework/scaffold.dart';
 import 'primitives/auto_dispose_mixin.dart';
 import 'screens/app_size/app_size_controller.dart';
 import 'screens/app_size/app_size_screen.dart';
@@ -21,6 +28,8 @@ import 'screens/debugger/debugger_controller.dart';
 import 'screens/debugger/debugger_screen.dart';
 import 'screens/inspector/inspector_controller.dart';
 import 'screens/inspector/inspector_screen.dart';
+import 'screens/inspector/inspector_tree_controller.dart';
+import 'screens/inspector/primitives/inspector_common.dart';
 import 'screens/logging/logging_controller.dart';
 import 'screens/logging/logging_screen.dart';
 import 'screens/memory/memory_controller.dart';
@@ -35,17 +44,10 @@ import 'screens/provider/provider_screen.dart';
 import 'screens/vm_developer/vm_developer_tools_controller.dart';
 import 'screens/vm_developer/vm_developer_tools_screen.dart';
 import 'service/service_extension_widgets.dart';
-import 'shared/about_dialog.dart';
 import 'shared/common_widgets.dart';
 import 'shared/dialogs.dart';
 import 'shared/globals.dart';
-import 'shared/initializer.dart';
-import 'shared/landing_screen.dart';
-import 'shared/notifications.dart';
-import 'shared/release_notes/release_notes.dart';
-import 'shared/report_feedback_button.dart';
 import 'shared/routing.dart';
-import 'shared/scaffold.dart';
 import 'shared/screen.dart';
 import 'shared/snapshot_screen.dart';
 import 'shared/theme.dart';
@@ -138,6 +140,14 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
   }
 
   @override
+  void dispose() {
+    // preferences is initialized in main() to avoid flash of content with
+    // incorrect theme.
+    preferences.dispose();
+    super.dispose();
+  }
+
+  @override
   void didUpdateWidget(DevToolsApp oldWidget) {
     super.didUpdateWidget(oldWidget);
     _clearCachedRoutes();
@@ -171,8 +181,8 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
     return MaterialPage(
       child: DevToolsScaffold.withChild(
         key: const Key('not-found'),
-        child: CenteredMessage("'$page' not found."),
         ideTheme: ideTheme,
+        child: CenteredMessage("'$page' not found."),
       ),
     );
   }
@@ -188,13 +198,13 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
     if (vmServiceUri?.isEmpty ?? true) {
       return DevToolsScaffold.withChild(
         key: const Key('landing'),
-        child: LandingScreenBody(),
         ideTheme: ideTheme,
         actions: [
           OpenSettingsAction(),
           ReportFeedbackButton(),
           OpenAboutAction(),
         ],
+        child: LandingScreenBody(),
       );
     }
 
@@ -241,12 +251,12 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
             );
           },
           child: DevToolsScaffold.withChild(
+            ideTheme: ideTheme,
             child: CenteredMessage(
               page != null
                   ? 'The "$page" screen is not available for this application.'
                   : 'No tabs available for this application.',
             ),
-            ideTheme: ideTheme,
           ),
         );
       },
@@ -263,25 +273,25 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
         final snapshotArgs = SnapshotArguments.fromArgs(args);
         return DevToolsScaffold.withChild(
           key: UniqueKey(),
+          ideTheme: ideTheme,
           child: _providedControllers(
             offline: true,
             child: SnapshotScreenBody(snapshotArgs, _screens),
           ),
-          ideTheme: ideTheme,
         );
       },
       appSizePageId: (_, __, ___) {
         return DevToolsScaffold.withChild(
           key: const Key('appsize'),
-          child: _providedControllers(
-            child: const AppSizeBody(),
-          ),
           ideTheme: ideTheme,
           actions: [
             OpenSettingsAction(),
             ReportFeedbackButton(),
             OpenAboutAction(),
           ],
+          child: _providedControllers(
+            child: const AppSizeBody(),
+          ),
         );
       },
     };
@@ -321,7 +331,7 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
       builder: (context, child) {
         return Provider<AnalyticsController>.value(
           value: widget.analyticsController,
-          child: Notifications(
+          child: NotificationsView(
             child: ReleaseNotesViewer(
               releaseNotesController: releaseNotesController,
               child: IDGScreen(
@@ -445,8 +455,8 @@ class OpenSettingsAction extends StatelessWidget {
           );
         },
         child: Container(
-          width: DevToolsScaffold.actionWidgetSize,
-          height: DevToolsScaffold.actionWidgetSize,
+          width: actionWidgetSize,
+          height: actionWidgetSize,
           alignment: Alignment.center,
           child: Icon(
             Icons.settings,
@@ -532,6 +542,7 @@ class SettingsDialog extends StatelessWidget {
   }
 }
 
+// TODO(polinach): consider reusing CheckboxSettings from shared/common_widgets.
 class CheckboxSetting extends StatelessWidget {
   const CheckboxSetting({
     Key? key,
@@ -586,9 +597,13 @@ class CheckboxSetting extends StatelessWidget {
 List<DevToolsScreen> get defaultScreens {
   final vmDeveloperToolsController = VMDeveloperToolsController();
   return <DevToolsScreen>[
-    DevToolsScreen<InspectorSettingsController>(
+    DevToolsScreen<InspectorController>(
       const InspectorScreen(),
-      createController: () => InspectorSettingsController(),
+      createController: () => InspectorController(
+        inspectorTree: InspectorTreeController(),
+        detailsTree: InspectorTreeController(),
+        treeType: FlutterTreeType.widget,
+      ),
     ),
     DevToolsScreen<PerformanceController>(
       const PerformanceScreen(),
@@ -622,7 +637,7 @@ List<DevToolsScreen> get defaultScreens {
       createController: () => AppSizeController(),
     ),
     DevToolsScreen<VMDeveloperToolsController>(
-      VMDeveloperToolsScreen(controller: vmDeveloperToolsController),
+      const VMDeveloperToolsScreen(),
       controller: vmDeveloperToolsController,
     ),
     // Show the sample DevTools screen.
