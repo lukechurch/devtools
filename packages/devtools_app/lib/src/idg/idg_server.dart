@@ -1,7 +1,7 @@
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
+
 import 'idg_controller.dart';
-import 'dart:async';
 
 late IDGServer server;
 
@@ -11,18 +11,18 @@ late IDGServer server;
 // }
 
 class IDGServer {
-  final IDGController controller;
   IDGServer(this.controller) {
     print('IDGServer.ctor');
   }
+  final IDGController controller;
 
-  start() async {
+  void start() async {
     // Open a port on the machine to listen on
     print('IDGServer.start');
-    var handler =
+    final handler =
         const Pipeline().addMiddleware(logRequests()).addHandler(_echoRequest);
 
-    var server = await shelf_io.serve(handler, '127.0.0.1', 9999);
+    final server = await shelf_io.serve(handler, '127.0.0.1', 9999);
 
     // Enable content compression
     server.autoCompress = true;
@@ -31,15 +31,15 @@ class IDGServer {
   }
 
   Response _echoRequest(Request request) {
-    String reqUrl = Uri.decodeFull(request.url.toString());
-    controller.log(LogData(
-      'vscode',
-      reqUrl,
-      DateTime.now().millisecondsSinceEpoch,
-      summary: reqUrl,
-      isError: false,
-    ));
-    // }
+    final String reqUrl = Uri.decodeFull(request.url.toString());
+    controller.log(
+      LogData(
+        'vscode',
+        reqUrl,
+        DateTime.now().millisecondsSinceEpoch,
+        summary: reqUrl,
+      ),
+    );
 
     return Response.ok('Request for "${request.url}"');
   }

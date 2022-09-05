@@ -13,6 +13,7 @@ import 'package:intl/intl.dart';
 import '../../analytics/analytics.dart' as ga;
 import '../../analytics/constants.dart' as analytics_constants;
 import '../../config_specific/logger/logger.dart' as logger;
+import '../../idg/idg_controller.dart';
 import '../../primitives/auto_dispose_mixin.dart';
 import '../../primitives/utils.dart';
 import '../../shared/common_widgets.dart';
@@ -194,6 +195,7 @@ class HeapTreeViewState extends State<HeapTree>
   int lastSnapshotMemoryTotal = 0;
 
   late bool treeMapVisible;
+  late bool isSnapshotButtonHighlighted;
 
   late AnimationController _animation;
 
@@ -325,6 +327,14 @@ class HeapTreeViewState extends State<HeapTree>
     addAutoDisposeListener(controller.treeMapVisible, () {
       setState(() {
         treeMapVisible = controller.treeMapVisible.value;
+      });
+    });
+
+    isSnapshotButtonHighlighted = controller.snapshotButtonHighlighted.value;
+    addAutoDisposeListener(controller.snapshotButtonHighlighted, () {
+      setState(() {
+        isSnapshotButtonHighlighted =
+            controller.snapshotButtonHighlighted.value;
       });
     });
 
@@ -675,6 +685,7 @@ class HeapTreeViewState extends State<HeapTree>
             icon: Icons.camera,
             label: 'Take Heap Snapshot',
             onPressed: _isSnapshotRunning ? null : _takeHeapSnapshot,
+            color: isSnapshotButtonHighlighted ? Colors.red : Colors.white,
           ),
           const SizedBox(width: defaultSpacing),
           Row(
@@ -1081,6 +1092,13 @@ class HeapTreeViewState extends State<HeapTree>
     }
 
     controller.memoryTimeline.addSnapshotEvent(auto: !userGenerated);
+
+    if (userGenerated) {
+      final IDGController idgController = globals[IDGController];
+      idgController.log(
+        LogData('mem-snapshot', '', DateTime.now().millisecondsSinceEpoch),
+      );
+    }
 
     setState(() {
       snapshotState = SnapshotStatus.streaming;

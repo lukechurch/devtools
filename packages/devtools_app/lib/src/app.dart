@@ -137,6 +137,7 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
 
     releaseNotesController = ReleaseNotesController();
     idgController = IDGController();
+    setGlobal(IDGController, idgController);
   }
 
   @override

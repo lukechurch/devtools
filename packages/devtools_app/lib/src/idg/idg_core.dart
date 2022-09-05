@@ -1,52 +1,63 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:vm_service/vm_service.dart';
-
 class Recipe {
   Recipe(this.steps);
 
   List<Step> steps;
 
   Set<Sensor> get allSensors {
-    final Set<Sensor> sensors = Set<Sensor>();
+    final Set<Sensor> sensors = <Sensor>{};
     for (var step in steps) {
       sensors.add(step.nextStepGuard!);
     }
     return sensors;
   }
 
-  void reset() => steps.forEach((element) {
-        element.reset();
-      });
+  void reset() {
+    for (var element in steps) {
+      element.reset();
+    }
+  }
 }
 
 class Action {
+  Action(this.name, this.onClick);
   String name;
   Future Function() onClick;
-
-  Action(this.name, this.onClick);
 }
 
 class Step {
   Step({
     this.title,
     this.text,
+    this.imageUrl,
+    this.imageMaxHeight,
+    this.hasInputField = false,
+    this.inputFieldData,
     this.nextStepGuard,
     this.isTitleButton = false,
     this.buttons = const <Action>[],
   });
 
   String? title;
-  late bool isTitleButton;
+  bool isTitleButton;
   String? text;
+  String? imageUrl;
+  double? imageMaxHeight;
+  bool hasInputField;
+  String? inputFieldData;
   Sensor? nextStepGuard;
   // Action action;
   bool get isDone => nextStepGuard!.isDone;
   bool isActive = false;
   List<Action> buttons;
 
-  void reset() => nextStepGuard!.reset();
+  void reset() {
+    nextStepGuard!.reset();
+    isActive = false;
+    inputFieldData = null;
+  }
 }
 
 abstract class Sensor {
@@ -63,11 +74,11 @@ abstract class Sensor {
 }
 
 class PerfSensor extends Sensor {
-  int elapsedMsThreshold;
   PerfSensor(sensorName, presentationName, this.elapsedMsThreshold)
       : super(sensorName, presentationName) {
     reset();
   }
+  int elapsedMsThreshold;
 
   late bool triggered;
   late int elapsedMilliseconds;
@@ -75,11 +86,11 @@ class PerfSensor extends Sensor {
   @override
   void trigger(IDGEvent e) {
     print(e.eventData);
-    int elapsedMs =
-        json.decode(e.eventData)["extensionData"]["elapsedMilliseconds"];
+    final int elapsedMs =
+        json.decode(e.eventData)['extensionData']['elapsedMilliseconds'];
 
     triggered = elapsedMs < elapsedMsThreshold;
-    if (triggered) this.elapsedMilliseconds = elapsedMs;
+    if (triggered) elapsedMilliseconds = elapsedMs;
   }
 
   @override
@@ -121,19 +132,18 @@ class PresenceSensor extends Sensor {
 }
 
 class FileChangeSensor extends Sensor {
-  String filePath;
-
   FileChangeSensor(sensorName, presentationName, this.filePath)
       : super(sensorName, presentationName) {
     reset();
   }
+  String filePath;
 
   late bool triggered;
 
   @override
   void trigger(IDGEvent e) {
     // idg?arg=IDG report: [4:44:28 AM] onDidChangeTextDocument /Users/lukechurch/GitRepos/LCC/idg_sample_apps/image_list/lib/main.dart
-    if (e.eventData.contains("onDidChangeTextDocument") &&
+    if (e.eventData.contains('onDidChangeTextDocument') &&
         e.eventData.contains(filePath)) triggered = true;
   }
 
@@ -150,11 +160,10 @@ class FileChangeSensor extends Sensor {
 }
 
 class CondAnd extends Sensor {
+  CondAnd(this.cond, this.sensor)
+      : super(sensor.sensorName, sensor.presentationName);
   Sensor sensor;
   bool Function() cond;
-
-  CondAnd(bool Function() this.cond, this.sensor)
-      : super(sensor.sensorName, sensor.presentationName);
 
   @override
   String valueString() => sensor.valueString();
@@ -171,12 +180,32 @@ class CondAnd extends Sensor {
   }
 }
 
-class MaskUntil extends Sensor {
+class CondOr extends Sensor {
+  CondOr(this.cond, this.sensor)
+      : super(sensor.sensorName, sensor.presentationName);
   Sensor sensor;
   bool Function() cond;
 
-  MaskUntil(bool Function() this.cond, this.sensor)
+  @override
+  String valueString() => sensor.valueString();
+
+  @override
+  bool get isDone => cond() || sensor.isDone;
+
+  @override
+  void trigger(IDGEvent e) => sensor.trigger(e);
+
+  @override
+  void reset() {
+    sensor.reset();
+  }
+}
+
+class MaskUntil extends Sensor {
+  MaskUntil(this.cond, this.sensor)
       : super(sensor.sensorName, sensor.presentationName);
+  Sensor sensor;
+  bool Function() cond;
 
   @override
   String valueString() => sensor.valueString();
@@ -227,21 +256,29 @@ class IDGEvent {
 
 class IDGEngine {
   final Set<Sensor> _senorsEventsToWatch = <Sensor>{};
-  final Set<Recipe> _recipesToWatch = <Recipe>{};
+  final Map<String, Recipe> _recipesToWatch = <String, Recipe>{};
+  String? selectedRecipe;
 
   final StreamController<bool> updatesController = StreamController.broadcast();
 
   Recipe getRecipe() {
-    assert(_recipesToWatch.length == 1);
-    return _recipesToWatch.first;
+    return _recipesToWatch[selectedRecipe]!;
   }
   // List<IDGEvent> events = [];
 
-  void addRecipes(Recipe r) {
-    print("IDG addRecipes $r");
-    _recipesToWatch.add(r);
-    print("IDG addRecipes - adding sensors ${r.allSensors}");
+  void addRecipes(String name, Recipe r) {
+    print('IDG addRecipes $r');
+    _recipesToWatch[name] = r;
+    selectedRecipe ??= name;
+    print('IDG addRecipes - adding sensors ${r.allSensors}');
     _senorsEventsToWatch.addAll(r.allSensors);
+  }
+
+  void selectRecipe(String name) {
+    assert(_recipesToWatch.keys.contains(name));
+    selectedRecipe = name;
+    reset();
+    updatesController.add(true);
   }
 
   void notifyOfEvent(IDGEvent event) {
@@ -252,20 +289,21 @@ class IDGEngine {
       // print(
       //     "Sensor Name for test: ${event.eventName} == ${sensor.sensorName}, match: ${sensor.sensorName == event.eventName}");
       if (sensor.sensorName == event.eventName) {
-        print("IDG: Triggering sensor: ${sensor.sensorName}");
+        print('IDG: Triggering sensor: ${sensor.sensorName}');
         sensor.trigger(event);
         _updateActiveSteps();
         sensorSeen = true;
       }
     }
-    // DEBUG
-    if (!sensorSeen)
-      print(
-          "IDG: No sensor found for : ${event.eventName} : ${event.eventData}");
+    // DEBUG - noisy
+    // if (!sensorSeen) {
+    //   print(
+    //       'IDG: No sensor found for : ${event.eventName} : ${event.eventData}');
+    // }
   }
 
   void _updateActiveSteps() {
-    for (var r in _recipesToWatch) {
+    for (var r in _recipesToWatch.values) {
       bool seenInactiveStep = false;
       for (var step in r.steps) {
         if (!step.isDone && !seenInactiveStep) {
@@ -280,6 +318,9 @@ class IDGEngine {
   }
 
   void reset() {
-    _recipesToWatch.first.reset();
+    for (var recipe in _recipesToWatch.values) {
+      recipe.reset();
+    }
+    _updateActiveSteps();
   }
 }

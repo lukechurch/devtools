@@ -4,32 +4,26 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math' as math;
-import "dart:io" as io;
 
 import 'package:devtools_shared/devtools_shared.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
-import 'package:path/path.dart' as path;
 import 'package:vm_service/vm_service.dart';
 
-import '../primitives/auto_dispose.dart';
 import '../config_specific/logger/logger.dart' as logger;
+import '../primitives/auto_dispose.dart';
 import '../primitives/message_bus.dart';
-import '../shared/globals.dart';
+import '../primitives/utils.dart';
 import '../screens/inspector/diagnostics_node.dart';
 import '../screens/inspector/inspector_service.dart';
-import '../screens/inspector/inspector_tree.dart';
-import '../screens/inspector/inspector_tree_controller.dart';
-import '../ui/filter.dart';
-import '../ui/search.dart';
-import '../shared/utils.dart';
-import '../primitives/utils.dart';
+import '../screens/logging/logging_controller.dart';
 import '../service/vm_service_wrapper.dart';
+import '../shared/globals.dart';
 import 'idg_core.dart';
-import 'idg_recipes.dart';
 import 'idg_screen.dart';
 import 'idg_server.dart';
+
+export '../screens/logging/logging_controller.dart';
 
 // For performance reasons, we drop old logs in batches, so the log will grow
 // to kMaxLogItemsUpperBound then truncate to kMaxLogItemsLowerBound.
@@ -39,220 +33,46 @@ final DateFormat timeFormat = DateFormat('HH:mm:ss.SSS');
 
 bool _verboseDebugging = false;
 
-typedef OnShowDetails = void Function({
-  String text,
-  InspectorTreeController tree,
-});
-
-typedef CreateLoggingTree = InspectorTreeController Function({
-  VoidCallback onSelectionChange,
-});
-
-Future<String?> _retrieveFullStringValue(
-  VmServiceWrapper service,
+Future<String> _retrieveFullStringValue(
+  VmServiceWrapper? service,
   IsolateRef isolateRef,
   InstanceRef stringRef,
 ) {
   final fallback = '${stringRef.valueAsString}...';
   // TODO(kenz): why is service null?
 
-  var ret = service.retrieveFullStringValue(
-    isolateRef.id!,
-    stringRef,
-    onUnavailable: (truncatedValue) => fallback,
-  );
-
-  return ret;
-}
-
-class IDGDetailsController {
-  IDGDetailsController({
-    required this.onShowInspector,
-    required this.onShowDetails,
-    required this.createLoggingTree,
-  });
-
-  static const JsonEncoder jsonEncoder = JsonEncoder.withIndent('  ');
-
-  late LogData data;
-
-  /// Callback to execute to show the inspector.
-  final VoidCallback onShowInspector;
-
-  /// Callback to execute to show the data from the details tree in the view.
-  final OnShowDetails onShowDetails;
-
-  /// Callback to create an inspectorTree for the logging view of the correct
-  /// type.
-  final CreateLoggingTree createLoggingTree;
-
-  InspectorTreeController? tree;
-
-  void setData(LogData data) {
-    this.data = data;
-
-    tree = null;
-
-    if (data == null) {
-      onShowDetails(text: '');
-      return;
-    }
-
-    if (data.node != null) {
-      tree = createLoggingTree(
-        onSelectionChange: () {
-          final InspectorTreeNode? node = tree?.selection;
-          if (node != null) {
-            tree?.maybePopulateChildren(node);
-          }
-
-          // TODO(jacobr): node.diagnostic.isDiagnosticableValue isn't quite
-          // right.
-          if (node!.diagnostic!.isDiagnosticableValue) {
-            // TODO(jacobr): warn if the selection can't be set as the node is
-            // stale which is likely if this is an old log entry.
-            if (onShowInspector != null) {
-              onShowInspector();
-            }
-            node.diagnostic!.setSelectionInspector(false);
-          }
-        },
-      );
-
-      final InspectorTreeNode root = tree!.setupInspectorTreeNode(
-        tree!.createNode(),
-        data.node!,
-        expandChildren: true,
-        expandProperties: true,
-      );
-      // No sense in collapsing the root node.
-      root.allowExpandCollapse = false;
-      tree?.root = root;
-      onShowDetails(tree: tree!);
-
-      return;
-    }
-
-    // See if we need to asynchronously compute the log entry details.
-    if (data.needsComputing) {
-      onShowDetails(text: '');
-
-      data.compute().then((_) {
-        // If we're still displaying the same log entry, then update the UI with
-        // the calculated value.
-        if (this.data == data) {
-          _updateUIFromData();
-        }
-      });
-    } else {
-      _updateUIFromData();
-    }
-  }
-
-  void _updateUIFromData() {
-    if (data.details!.startsWith('{') && data.details!.endsWith('}')) {
-      try {
-        // If the string decodes properly, then format the json.
-        final dynamic result = jsonDecode(data.details!);
-        onShowDetails(text: jsonEncoder.convert(result));
-      } catch (e) {
-        onShowDetails(text: data.details!);
-      }
-    } else {
-      onShowDetails(text: data.details!);
-    }
-  }
+  return service
+          ?.retrieveFullStringValue(
+            isolateRef.id!,
+            stringRef,
+            onUnavailable: (truncatedValue) => fallback,
+          )
+          .then((value) => value != null ? value : fallback) ??
+      Future.value(fallback);
 }
 
 class IDGController extends DisposableController
-    with
-        SearchControllerMixin<LogData>,
-        FilterControllerMixin<LogData>,
-        AutoDisposeControllerMixin {
+    with AutoDisposeControllerMixin {
   IDGController() {
-    idgEngine = new IDGEngine();
-    idgEngine.addRecipes(minimalRecipe);
+    idgEngine = IDGEngine();
+    for (var recipe in idgRecipes.keys) {
+      idgEngine.addRecipes(recipe, idgRecipes[recipe]!);
+    }
 
     autoDisposeStreamSubscription(
-        serviceManager.onConnectionAvailable.listen(_handleConnectionStart));
-
+      serviceManager.onConnectionAvailable.listen(_handleConnectionStart),
+    );
     if (serviceManager.connectedAppInitialized) {
       _handleConnectionStart(serviceManager.service!);
     }
     autoDisposeStreamSubscription(
-        serviceManager.onConnectionClosed.listen(_handleConnectionStop));
+      serviceManager.onConnectionClosed.listen(_handleConnectionStop),
+    );
     _handleBusEvents();
   }
 
-  static const kindFilterId = 'logging-kind-filter';
-
-  final filterArgs = {
-    kindFilterId: QueryFilterArgument(keys: ['kind', 'k']),
-  };
-
-  final StreamController<String> _logStatusController =
-      StreamController.broadcast();
-
-  /// A stream of events for the textual description of the log contents.
-  ///
-  /// See also [statusText].
-  Stream get onLogStatusChanged => _logStatusController.stream;
-
-  List<LogData> data = <LogData>[];
-
-  final _selectedLog = ValueNotifier<LogData?>(null);
-
-  ValueListenable<LogData?> get selectedLog => _selectedLog;
-
-  void selectLog(LogData data) {
-    _selectedLog.value = data;
-  }
-
-  void _updateData(List<LogData> logs) {
-    data = logs;
-    _updateSelection();
-    _updateStatus();
-  }
-
-  void _updateSelection() {
-    final selected = _selectedLog.value;
-    if (selected != null) {
-      final logs = filteredData.value;
-      if (!logs.contains(selected)) {
-        _selectedLog.value = null;
-      }
-    }
-  }
-
-  dynamic get objectGroup => serviceManager.consoleService.objectGroup;
-
-  String get statusText {
-    final int totalCount = data.length;
-    final int showingCount = filteredData.value.length;
-
-    String label;
-
-    if (totalCount == showingCount) {
-      label = nf.format(totalCount);
-    } else {
-      label = 'showing ${nf.format(showingCount)} of '
-          '${nf.format(totalCount)}';
-    }
-
-    label = '$label ${pluralize('event', totalCount)}';
-
-    return label;
-  }
-
-  void _updateStatus() {
-    final label = statusText;
-    _logStatusController.add(label);
-  }
-
-  void clear() {
-    resetFilter();
-    _updateData([]);
-  }
+  ObjectGroup get objectGroup =>
+      serviceManager.consoleService.objectGroup as ObjectGroup;
 
   late CommPortListener listener;
 
@@ -266,24 +86,28 @@ class IDGController extends DisposableController
     final _StdoutEventHandler stdoutHandler =
         _StdoutEventHandler(this, 'stdout');
     autoDisposeStreamSubscription(
-        service.onStdoutEventWithHistory.listen(stdoutHandler.handle));
+      service.onStdoutEventWithHistory.listen(stdoutHandler.handle),
+    );
 
     // Log stderr events.
     final _StdoutEventHandler stderrHandler =
         _StdoutEventHandler(this, 'stderr', isError: true);
     autoDisposeStreamSubscription(
-        service.onStderrEventWithHistory.listen(stderrHandler.handle));
+      service.onStderrEventWithHistory.listen(stderrHandler.handle),
+    );
 
     // Log GC events.
     autoDisposeStreamSubscription(service.onGCEvent.listen(_handleGCEvent));
 
     // Log `dart:developer` `log` events.
     autoDisposeStreamSubscription(
-        service.onLoggingEventWithHistory.listen(_handleDeveloperLogEvent));
+      service.onLoggingEventWithHistory.listen(_handleDeveloperLogEvent),
+    );
 
     // Log Flutter extension events.
     autoDisposeStreamSubscription(
-        service.onExtensionEventWithHistory.listen(_handleExtensionEvent));
+      service.onExtensionEventWithHistory.listen(_handleExtensionEvent),
+    );
   }
 
   void _handleExtensionEvent(Event e) async {
@@ -308,56 +132,70 @@ class IDGController extends DisposableController
 
       final String frameId = '#${frame.number}';
       final String frameInfoText =
-          '$frameId ${frame.elapsedMs.toStringAsFixed(1).padLeft(4)}ms ';
+          '$frameId ${frame.elapsedMs!.toStringAsFixed(1).padLeft(4)}ms ';
 
-      log(LogData(
-        e.extensionKind!.toLowerCase(),
-        jsonEncode(e.extensionData!.data),
-        e.timestamp!,
-        summary: frameInfoText,
-      ));
+      log(
+        LogData(
+          e.extensionKind!.toLowerCase(),
+          jsonEncode(e.extensionData!.data),
+          e.timestamp,
+          summary: frameInfoText,
+        ),
+      );
     } else if (e.extensionKind == ImageSizesForFrame.eventName) {
       final images = ImageSizesForFrame.from(e.extensionData!.data);
 
       for (final image in images) {
-        log(LogData(
-          e.extensionKind!.toLowerCase(),
-          jsonEncode(image.rawJson),
-          e.timestamp!,
-          summary: image.summary,
-        ));
+        log(
+          LogData(
+            e.extensionKind!.toLowerCase(),
+            jsonEncode(image.rawJson),
+            e.timestamp,
+            summary: image.summary,
+          ),
+        );
       }
     } else if (e.extensionKind == NavigationInfo.eventName) {
       final NavigationInfo navInfo = NavigationInfo.from(e.extensionData!.data);
 
-      log(LogData(
-        e.extensionKind!.toLowerCase(),
-        jsonEncode(e.json),
-        e.timestamp!,
-        summary: navInfo.routeDescription,
-      ));
+      log(
+        LogData(
+          e.extensionKind!.toLowerCase(),
+          jsonEncode(e.json),
+          e.timestamp,
+          summary: navInfo.routeDescription,
+        ),
+      );
     } else if (untitledEvents.contains(e.extensionKind)) {
-      log(LogData(
-        e.extensionKind!.toLowerCase(),
-        jsonEncode(e.json),
-        e.timestamp!,
-        summary: '',
-      ));
+      log(
+        LogData(
+          e.extensionKind!.toLowerCase(),
+          jsonEncode(e.json),
+          e.timestamp,
+          summary: '',
+        ),
+      );
     } else if (e.extensionKind == ServiceExtensionStateChangedInfo.eventName) {
       final ServiceExtensionStateChangedInfo changedInfo =
           ServiceExtensionStateChangedInfo.from(e.extensionData!.data);
 
-      log(LogData(
-        e.extensionKind!.toLowerCase(),
-        jsonEncode(e.json),
-        e.timestamp!,
-        summary: '${changedInfo.extension}: ${changedInfo.value}',
-      ));
+      log(
+        LogData(
+          e.extensionKind!.toLowerCase(),
+          jsonEncode(e.json),
+          e.timestamp,
+          summary: '${changedInfo.extension}: ${changedInfo.value}',
+        ),
+      );
     } else if (e.extensionKind == 'Flutter.Error') {
       // TODO(pq): add tests for error extension handling once framework changes
       // are landed.
       final RemoteDiagnosticsNode node = RemoteDiagnosticsNode(
-          e.extensionData!.data, objectGroup, false, null);
+        e.extensionData!.data,
+        objectGroup,
+        false,
+        null,
+      );
       // Workaround the fact that the error objects from the server don't have
       // style error.
       node.style = DiagnosticsTreeStyle.error;
@@ -366,27 +204,30 @@ class IDGController extends DisposableController
       }
 
       final RemoteDiagnosticsNode summary = _findFirstSummary(node) ?? node;
-      log(LogData(
-        e.extensionKind!.toLowerCase(),
-        jsonEncode(e.extensionData!.data),
-        e.timestamp!,
-        summary: summary.toDiagnosticsNode().toString(),
-      ));
+      log(
+        LogData(
+          e.extensionKind!.toLowerCase(),
+          jsonEncode(e.extensionData!.data),
+          e.timestamp,
+          summary: summary.toDiagnosticsNode().toString(),
+        ),
+      );
     } else {
-      log(LogData(
-        e.extensionKind!.toLowerCase(),
-        jsonEncode(e.json),
-        e.timestamp!,
-        summary: e.json.toString(),
-      ));
+      log(
+        LogData(
+          e.extensionKind!.toLowerCase(),
+          jsonEncode(e.json),
+          e.timestamp,
+          summary: e.json.toString(),
+        ),
+      );
     }
   }
 
   void _handleGCEvent(Event e) {
-    print("_handleGCEvent");
     final HeapSpace newSpace = HeapSpace.parse(e.json!['new'])!;
     final HeapSpace oldSpace = HeapSpace.parse(e.json!['old'])!;
-    final Map<dynamic, dynamic> isolateRef = e.json!['isolate'];
+    final isolateRef = e.json!['isolate'];
 
     final int usedBytes = newSpace.used! + oldSpace.used!;
     final int capacityBytes = newSpace.capacity! + oldSpace.capacity!;
@@ -397,7 +238,7 @@ class IDGController extends DisposableController
         '${e.json!['reason']} collection in $time ms • '
         '${printMB(usedBytes, includeUnit: true)} used of ${printMB(capacityBytes, includeUnit: true)}';
 
-    final Map<String, dynamic> event = <String, dynamic>{
+    final event = <String, dynamic>{
       'reason': e.json!['reason'],
       'new': newSpace.json,
       'old': oldSpace.json,
@@ -405,31 +246,30 @@ class IDGController extends DisposableController
     };
 
     final String message = jsonEncode(event);
-    log(LogData('gc', message, e.timestamp!, summary: summary));
+    log(LogData('gc', message, e.timestamp, summary: summary));
   }
 
   void _handleDeveloperLogEvent(Event e) {
-    final VmServiceWrapper service = serviceManager.service!;
+    final VmServiceWrapper? service = serviceManager.service;
 
-    final dynamic logRecord = e.json!['logRecord'];
+    final logRecord = e.json!['logRecord'];
 
     String? loggerName =
-        _valueAsString(InstanceRef.parse(logRecord['loggerName'])!);
+        _valueAsString(InstanceRef.parse(logRecord['loggerName']));
     if (loggerName == null || loggerName.isEmpty) {
       loggerName = 'log';
     }
-    final int level = logRecord['level'];
+    final int? level = logRecord['level'];
     final InstanceRef messageRef = InstanceRef.parse(logRecord['message'])!;
     String? summary = _valueAsString(messageRef);
     if (messageRef.valueAsStringIsTruncated == true) {
-      if (summary == null) summary = "";
-      summary += '...';
+      summary = summary! + '...';
     }
-    final InstanceRef error = InstanceRef.parse(logRecord['error'])!;
-    final InstanceRef stackTrace = InstanceRef.parse(logRecord['stackTrace'])!;
+    final InstanceRef? error = InstanceRef.parse(logRecord['error']);
+    final InstanceRef? stackTrace = InstanceRef.parse(logRecord['stackTrace']);
 
-    final String details = "$summary";
-    late Future<String> Function() detailsComputer;
+    final String? details = summary;
+    Future<String> Function()? detailsComputer;
 
     // If the message string was truncated by the VM, or the error object or
     // stackTrace objects were non-null, we need to ask the VM for more
@@ -441,19 +281,19 @@ class IDGController extends DisposableController
       detailsComputer = () async {
         // Get the full string value of the message.
         String result =
-            (await _retrieveFullStringValue(service, e.isolate!, messageRef))!;
+            await _retrieveFullStringValue(service, e.isolate!, messageRef);
 
         // Get information about the error object. Some users of the
         // dart:developer log call may pass a data payload in the `error`
         // field, encoded as a json encoded string, so handle that case.
         if (_isNotNull(error)) {
-          if (error.valueAsString != null) {
+          if (error!.valueAsString != null) {
             final String errorString =
-                (await _retrieveFullStringValue(service, e.isolate!, error))!;
+                await _retrieveFullStringValue(service, e.isolate!, error);
             result += '\n\n$errorString';
           } else {
             // Call `toString()` on the error object and display that.
-            final dynamic toStringResult = await service.invoke(
+            final toStringResult = await service!.invoke(
               e.isolate!.id!,
               error.id!,
               'toString',
@@ -465,8 +305,11 @@ class IDGController extends DisposableController
               final String? errorString = _valueAsString(error);
               result += '\n\n$errorString';
             } else if (toStringResult is InstanceRef) {
-              final String str = (await _retrieveFullStringValue(
-                  service, e.isolate!, toStringResult))!;
+              final String str = await _retrieveFullStringValue(
+                service,
+                e.isolate!,
+                toStringResult,
+              );
               result += '\n\n$str';
             }
           }
@@ -484,44 +327,24 @@ class IDGController extends DisposableController
     const int severeIssue = 1000;
     final bool isError = level != null && level >= severeIssue ? true : false;
 
-    log(LogData(
-      loggerName,
-      details,
-      e.timestamp!,
-      isError: isError,
-      summary: "$summary",
-      detailsComputer: detailsComputer,
-    ));
+    log(
+      LogData(
+        loggerName,
+        details,
+        e.timestamp,
+        isError: isError,
+        summary: summary,
+        detailsComputer: detailsComputer,
+      ),
+    );
   }
 
   void _handleConnectionStop(dynamic event) {}
 
   late IDGEngine idgEngine;
-  void log(LogData log) {
-    // Notify the IDG engine
 
-    idgEngine.notifyOfEvent(IDGEvent(log.kind, log.details!));
-
-    List<LogData> currentLogs = List.from(data);
-
-    // Insert the new item and clamped the list to kMaxLogItemsLength.
-    currentLogs.add(log);
-
-    // Note: We need to drop rows from the start because we want to drop old
-    // rows but because that's expensive, we only do it periodically (eg. when
-    // the list is 500 rows more).
-    if (currentLogs.length > kMaxLogItemsUpperBound) {
-      int itemsToRemove = currentLogs.length - kMaxLogItemsLowerBound;
-      // Ensure we remove an even number of rows to keep the alternating
-      // background in-sync.
-      if (itemsToRemove % 2 == 1) {
-        itemsToRemove--;
-      }
-      currentLogs = currentLogs.sublist(itemsToRemove);
-    }
-
-    _updateData(currentLogs);
-  }
+  void log(LogData log) =>
+      idgEngine.notifyOfEvent(IDGEvent(log.kind, log.details!));
 
   Stream get onEngineUpdated => idgEngine.updatesController.stream;
 
@@ -529,72 +352,70 @@ class IDGController extends DisposableController
 
   final _idgVisible = ValueNotifier<bool>(false);
 
-  void toggleIDGVisible(bool visible) {
-    _idgVisible.value = visible;
-  }
+  void toggleIDGVisible(bool visible) => _idgVisible.value = visible;
 
   static RemoteDiagnosticsNode? _findFirstSummary(RemoteDiagnosticsNode node) {
     if (node.level == DiagnosticLevel.summary) {
       return node;
     }
     RemoteDiagnosticsNode? summary;
-    if (node.inlineProperties != null) {
-      for (RemoteDiagnosticsNode property in node.inlineProperties) {
-        summary = _findFirstSummary(property);
-        if (summary != null) return summary;
-      }
+    for (var property in node.inlineProperties) {
+      summary = _findFirstSummary(property);
+      if (summary != null) return summary;
     }
-    if (node.childrenNow != null) {
-      for (RemoteDiagnosticsNode child in node.childrenNow) {
-        summary = _findFirstSummary(child);
-        if (summary != null) return summary;
-      }
+
+    for (RemoteDiagnosticsNode child in node.childrenNow) {
+      summary = _findFirstSummary(child);
+      if (summary != null) return summary;
     }
+
     return null;
   }
 
   void _handleBusEvents() {
     // TODO(jacobr): expose the messageBus for use by vm tests.
-    if (messageBus != null) {
-      autoDisposeStreamSubscription(
-          messageBus.onEvent(type: 'reload.end').listen((BusEvent event) {
+    autoDisposeStreamSubscription(
+      messageBus.onEvent(type: 'reload.end').listen((BusEvent event) {
         log(
           LogData(
             'hot.reload',
-            "${event.data}",
+            event.data as String?,
             DateTime.now().millisecondsSinceEpoch,
           ),
         );
-      }));
+      }),
+    );
 
-      autoDisposeStreamSubscription(
-          messageBus.onEvent(type: 'restart.end').listen((BusEvent event) {
+    autoDisposeStreamSubscription(
+      messageBus.onEvent(type: 'restart.end').listen((BusEvent event) {
         log(
           LogData(
             'hot.restart',
-            "${event.data}",
+            event.data as String?,
             DateTime.now().millisecondsSinceEpoch,
           ),
         );
-      }));
+      }),
+    );
 
-      // Listen for debugger events.
-      autoDisposeStreamSubscription(
-        messageBus
-            .onEvent()
-            .where((event) =>
-                event.type == 'debugger' || event.type.startsWith('debugger.'))
-            .listen(_handleDebuggerEvent),
-      );
+    // Listen for debugger events.
+    autoDisposeStreamSubscription(
+      messageBus
+          .onEvent()
+          .where(
+            (event) =>
+                event.type == 'debugger' || event.type.startsWith('debugger.'),
+          )
+          .listen(_handleDebuggerEvent),
+    );
 
-      // Listen for DevTools internal events.
-      autoDisposeStreamSubscription(
-        messageBus
-            .onEvent()
-            .where((event) => event.type.startsWith('devtools.'))
-            .listen(_handleDevToolsEvent),
-      );
-    }
+    // Listen for DevTools internal events.
+    autoDisposeStreamSubscription(
+      messageBus
+          .onEvent()
+          .where((event) => event.type.startsWith('devtools.'))
+          .listen(_handleDevToolsEvent),
+    );
   }
 
   void _handleDebuggerEvent(BusEvent event) {
@@ -609,7 +430,7 @@ class IDGController extends DisposableController
       LogData(
         event.type,
         jsonEncode(debuggerEvent.json),
-        debuggerEvent.timestamp!,
+        debuggerEvent.timestamp,
         summary: '${debuggerEvent.kind} ${debuggerEvent.isolate!.id}',
       ),
     );
@@ -617,7 +438,7 @@ class IDGController extends DisposableController
 
   void _handleDevToolsEvent(BusEvent event) {
     var details = event.data.toString();
-    late String summary;
+    String? summary;
 
     if (details.contains('\n')) {
       final lines = details.split('\n');
@@ -629,86 +450,22 @@ class IDGController extends DisposableController
       LogData(
         event.type,
         details,
-        0,
-        // DateTime.now().millisecondsSinceEpoch,
+        DateTime.now().millisecondsSinceEpoch,
         summary: summary,
       ),
     );
   }
-
-  // TODO(kenz): search through previous matches when possible.
-  @override
-  List<LogData> matchesForSearch(
-    String search, {
-    bool searchPreviousMatches = false,
-  }) {
-    if (search == null || search.isEmpty) return [];
-    final matches = <LogData>[];
-    final caseInsensitiveSearch = search.toLowerCase();
-
-    final currentLogs = filteredData.value;
-    for (final log in currentLogs) {
-      if ((log.summary != null &&
-              log.summary!.toLowerCase().contains(caseInsensitiveSearch)) ||
-          (log.details != null &&
-              log.details!.toLowerCase().contains(caseInsensitiveSearch))) {
-        matches.add(log);
-        // TODO(kenz): use the value of log.isSearchMatch in the logs table to
-        // improve performance. This will require some refactoring of FlatTable.
-      }
-    }
-    return matches;
-  }
-
-  @override
-  void filterData(Filter<LogData> filter) {
-    if (filter.queryFilter == null) {
-      filteredData
-        ..clear()
-        ..addAll(data);
-    } else {
-      filteredData
-        ..clear()
-        ..addAll(data.where((log) {
-          final kindArg = filter.queryFilter!.filterArguments[kindFilterId];
-          if (kindArg != null &&
-              !kindArg.matchesValue(log.kind.toLowerCase())) {
-            return false;
-          }
-
-          if (filter.queryFilter!.substrings.isNotEmpty) {
-            for (final substring in filter.queryFilter!.substrings) {
-              final caseInsensitiveSubstring = substring.toLowerCase();
-              final matchesKind = log.kind != null &&
-                  log.kind.toLowerCase().contains(caseInsensitiveSubstring);
-              if (matchesKind) return true;
-
-              final matchesSummary = log.summary != null &&
-                  log.summary!.toLowerCase().contains(caseInsensitiveSubstring);
-              if (matchesSummary) return true;
-
-              final matchesDetails = log.details != null &&
-                  log.summary!.toLowerCase().contains(caseInsensitiveSubstring);
-              if (matchesDetails) return true;
-            }
-            return false;
-          }
-          return true;
-        }).toList());
-    }
-    activeFilter.value = filter;
-  }
 }
 
 class CommPortListener {
-  CommPortListener(this.loggingController, this.name, {this.isError = false}) {
-    print("CommPort init");
+  CommPortListener(this.idgController, this.name, {this.isError = false}) {
+    print('CommPort init');
 
-    IDGServer server = IDGServer(this.loggingController);
+    final IDGServer server = IDGServer(idgController);
     server.start();
   }
 
-  final IDGController loggingController;
+  final IDGController idgController;
   final String name;
   final bool isError;
 }
@@ -720,36 +477,41 @@ class CommPortListener {
 /// we wait for up to 1ms when we get the `foo` event, to see if the next event
 /// is a single newline. If so, we add the newline to the previous log message.
 class _StdoutEventHandler {
-  _StdoutEventHandler(this.loggingController, this.name,
-      {this.isError = false});
+  _StdoutEventHandler(
+    this.idgController,
+    this.name, {
+    this.isError = false,
+  });
 
-  final IDGController loggingController;
+  final IDGController idgController;
   final String name;
   final bool isError;
 
   LogData? buffer;
-  late Timer timer;
+  Timer? timer;
 
   void handle(Event e) {
     final String message = decodeBase64(e.bytes!);
     print('_StdOutEventHandler: $message');
 
     if (buffer != null) {
-      timer.cancel();
+      timer?.cancel();
 
       if (message == '\n') {
-        loggingController.log(LogData(
-          buffer!.kind,
-          buffer!.details! + message,
-          buffer!.timestamp,
-          summary: buffer!.summary! + message,
-          isError: buffer!.isError,
-        ));
+        idgController.log(
+          LogData(
+            buffer!.kind,
+            buffer!.details! + message,
+            buffer!.timestamp,
+            summary: buffer!.summary! + message,
+            isError: buffer!.isError,
+          ),
+        );
         buffer = null;
         return;
       }
 
-      loggingController.log(buffer!);
+      idgController.log(buffer!);
       buffer = null;
     }
 
@@ -763,27 +525,32 @@ class _StdoutEventHandler {
     final LogData data = LogData(
       name,
       message,
-      e.timestamp!,
+      e.timestamp,
       summary: summary,
       isError: isError,
     );
 
     if (message == '\n') {
-      loggingController.log(data);
+      idgController.log(data);
     } else {
+      buffer = data;
       timer = Timer(const Duration(milliseconds: 1), () {
-        loggingController.log(data);
+        idgController.log(buffer!);
         buffer = null;
       });
     }
   }
 }
 
-bool _isNotNull(InstanceRef serviceRef) {
-  return serviceRef.kind != 'Null';
+bool _isNotNull(InstanceRef? serviceRef) {
+  return serviceRef != null && serviceRef.kind != 'Null';
 }
 
-String? _valueAsString(InstanceRef ref) {
+String? _valueAsString(InstanceRef? ref) {
+  if (ref == null) {
+    return null;
+  }
+
   if (ref.valueAsString == null) {
     return ref.valueAsString;
   }
@@ -793,187 +560,4 @@ String? _valueAsString(InstanceRef ref) {
   } else {
     return ref.valueAsString;
   }
-}
-
-/// A log data object that includes optional summary information about whether
-/// the log entry represents an error entry, the log entry kind, and more
-/// detailed data for the entry.
-///
-/// The details can optionally be loaded lazily on first use. If this is the
-/// case, this log entry will have a non-null `detailsComputer` field. After the
-/// data is calculated, the log entry will be modified to contain the calculated
-/// `details` data.
-class LogData with DataSearchStateMixin {
-  LogData(
-    this.kind,
-    this._details,
-    this.timestamp, {
-    this.summary,
-    this.isError = false,
-    this.detailsComputer,
-    this.node,
-  });
-
-  late final String kind;
-  late final int timestamp;
-  late final bool isError;
-  late final String? summary;
-
-  final RemoteDiagnosticsNode? node;
-  String? _details;
-  late Future<String> Function()? detailsComputer;
-
-  static const JsonEncoder prettyPrinter = JsonEncoder.withIndent('  ');
-
-  String? get details => _details;
-
-  bool get needsComputing => detailsComputer != null;
-
-  Future<void> compute() async {
-    _details = await detailsComputer!();
-    detailsComputer = null;
-  }
-
-  String get prettyPrinted {
-    if (needsComputing) {
-      return details!;
-    }
-
-    try {
-      return prettyPrinter
-          .convert(jsonDecode(details!))
-          .replaceAll(r'\n', '\n');
-    } catch (_) {
-      return details!;
-    }
-  }
-
-  bool matchesFilter(String filter) {
-    if (kind.toLowerCase().contains(filter)) {
-      return true;
-    }
-
-    if (summary != null && summary!.toLowerCase().contains(filter)) {
-      return true;
-    }
-
-    if (_details != null && _details!.toLowerCase().contains(filter)) {
-      return true;
-    }
-
-    return false;
-  }
-
-  @override
-  String toString() => 'LogData($kind, $timestamp)';
-}
-
-class FrameInfo {
-  FrameInfo(this.number, this.elapsedMs, this.startTimeMs);
-
-  static const String eventName = 'Flutter.Frame';
-
-  static const double kTargetMaxFrameTimeMs = 1000.0 / 60;
-
-  static FrameInfo from(Map<String, dynamic> data) {
-    return FrameInfo(
-        data['number'], data['elapsed'] / 1000, data['startTime'] / 1000);
-  }
-
-  final int number;
-  final num elapsedMs;
-  final num startTimeMs;
-
-  @override
-  String toString() => 'frame $number ${elapsedMs.toStringAsFixed(1)}ms';
-}
-
-class ImageSizesForFrame {
-  ImageSizesForFrame(
-    this.source,
-    this.displaySize,
-    this.imageSize,
-    this.rawJson,
-  );
-
-  static const String eventName = 'Flutter.ImageSizesForFrame';
-
-  static List<ImageSizesForFrame> from(Map<String, dynamic> data) {
-    //     "packages/flutter_gallery_assets/assets/icons/material/2.0x/material.png": {
-    //       "source": "packages/flutter_gallery_assets/assets/icons/material/2.0x/material.png",
-    //       "displaySize": {
-    //         "width": 64.0,
-    //         "height": 63.99999999999999
-    //       },
-    //       "imageSize": {
-    //         "width": 128.0,
-    //         "height": 128.0
-    //       },
-    //       "displaySizeInBytes": 21845,
-    //       "decodedSizeInBytes": 87381
-    //     }
-
-    return data.values.map((entry) {
-      return ImageSizesForFrame(
-        entry['source'],
-        entry['displaySize'],
-        entry['imageSize'],
-        entry,
-      );
-    }).toList();
-  }
-
-  final String source;
-  final Map<String, Object> displaySize;
-  final Map<String, Object> imageSize;
-  final Map<String, Object> rawJson;
-
-  String get summary {
-    final file = path.basename(source);
-
-    final int? displaySizeInBytes = rawJson['displaySizeInBytes'] as int;
-    final int? decodedSizeInBytes = rawJson['decodedSizeInBytes'] as int;
-
-    final double expansion =
-        math.sqrt(decodedSizeInBytes ?? 0) / math.sqrt(displaySizeInBytes ?? 1);
-
-    return 'Image $file • displayed at '
-        '${_round(displaySize['width'] as int)}x${_round(displaySize['height'] as int)}'
-        ' • created at '
-        '${_round(imageSize['width'] as int)}x${_round(imageSize['height'] as int)}'
-        ' • ${expansion.toStringAsFixed(1)}x';
-  }
-
-  int _round(num value) => value.round();
-
-  @override
-  String toString() =>
-      '$source ${displaySize['width']}x${displaySize['height']}';
-}
-
-class NavigationInfo {
-  NavigationInfo(this._route);
-
-  static const String eventName = 'Flutter.Navigation';
-
-  static NavigationInfo from(Map<String, dynamic> data) {
-    return NavigationInfo(data['route']);
-  }
-
-  final Map<String, dynamic> _route;
-
-  String get routeDescription => _route == null ? null : _route['description'];
-}
-
-class ServiceExtensionStateChangedInfo {
-  ServiceExtensionStateChangedInfo(this.extension, this.value);
-
-  static const String eventName = 'Flutter.ServiceExtensionStateChanged';
-
-  static ServiceExtensionStateChangedInfo from(Map<String, dynamic> data) {
-    return ServiceExtensionStateChangedInfo(data['extension'], data['value']);
-  }
-
-  final String extension;
-  final dynamic value;
 }

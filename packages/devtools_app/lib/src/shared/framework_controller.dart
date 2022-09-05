@@ -63,11 +63,9 @@ class FrameworkController {
   Stream get onDisconnected => _disconnectedController.stream;
 
   /// Example for how to create and respond to new actions
-  final StreamController<int> _testController = StreamController.broadcast();
-  Stream<int> get onTest => _testController.stream;
-  void notifyTest(int id) {
-    _testController.add(id);
-  }
+  final StreamController<int> _frameStream = StreamController.broadcast();
+  Stream<int> get onSelectFrame => _frameStream.stream;
+  void selectFrame(int index) => _frameStream.add(index);
 
   void _init() {
     serviceManager.connectedState.addListener(() {

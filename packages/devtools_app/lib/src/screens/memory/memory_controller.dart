@@ -239,6 +239,7 @@ class MemoryController extends DisposableController
   MemoryController() {
     memoryTimeline = MemoryTimeline(offline);
     memoryLog = MemoryLog(this);
+    setGlobal(MemoryController, this);
 
     // Update the chart when the memorySource changes.
     addAutoDisposeListener(memorySourceNotifier, () async {
@@ -424,6 +425,11 @@ class MemoryController extends DisposableController
   void toggleTreeMapVisible(bool value) {
     _treeMapVisible.value = value;
   }
+
+  final _snapshotButtonHighlighted = ValueNotifier<bool>(false);
+  ValueListenable get snapshotButtonHighlighted => _snapshotButtonHighlighted;
+  void toggleSnapshotButtonHighlighted(bool value) =>
+      _snapshotButtonHighlighted.value = value;
 
   bool isAnalyzeButtonEnabled() => computeSnapshotToAnalyze != null;
 
