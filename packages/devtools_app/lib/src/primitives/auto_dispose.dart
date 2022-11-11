@@ -4,6 +4,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 /// Provides functionality to simplify listening to streams and ValueNotifiers,
@@ -17,6 +18,16 @@ import 'package:flutter/material.dart';
 class Disposer {
   final List<StreamSubscription> _subscriptions = [];
   final List<FocusNode> _focusNodes = [];
+
+  @protected
+  @visibleForTesting
+  List<Listenable> get listenables => _listenables;
+
+  /// Not using VoidCallback because of
+  /// https://github.com/dart-lang/mockito/issues/579
+  @protected
+  @visibleForTesting
+  List<void Function()> get listeners => _listeners;
 
   final List<Listenable> _listenables = [];
   final List<VoidCallback> _listeners = [];
@@ -49,7 +60,7 @@ class Disposer {
   /// It is fine to call this method and then add additional subscriptions.
   void cancelStreamSubscriptions() {
     for (StreamSubscription subscription in _subscriptions) {
-      subscription.cancel();
+      unawaited(subscription.cancel());
     }
     _subscriptions.clear();
   }
@@ -66,6 +77,19 @@ class Disposer {
     _listeners.clear();
   }
 
+  /// Cancels a single listener, if present.
+  void cancelListener(VoidCallback? listener) {
+    if (listener == null) return;
+
+    assert(_listenables.length == _listeners.length);
+    final foundIndex =
+        _listeners.indexWhere((currentListener) => currentListener == listener);
+    if (foundIndex == -1) return;
+    _listenables[foundIndex].removeListener(_listeners[foundIndex]);
+    _listenables.removeAt(foundIndex);
+    _listeners.removeAt(foundIndex);
+  }
+
   /// Cancel all focus nodes added.
   ///
   /// It is fine to call this method and then add additional focus nodes.
@@ -74,6 +98,37 @@ class Disposer {
       focusNode.dispose();
     }
     _focusNodes.clear();
+  }
+
+  /// Runs [callback] when [trigger]'s value satisfies the [readyWhen] function.
+  ///
+  /// When calling [callOnceWhenReady] :
+  ///     - If [trigger]'s value satisfies [readyWhen], then the [callback] will
+  ///       be immediately triggered.
+  ///     - Otherwise, the [callback] will be triggered when [trigger]'s value
+  ///       changes to equal [readyWhen].
+  ///
+  /// Any listeners set by [callOnceWhenReady] will auto dispose, or be removed after the callback is run.
+  void callOnceWhenReady<T>({
+    required VoidCallback callback,
+    required ValueListenable<T> trigger,
+    required bool Function(T triggerValue) readyWhen,
+  }) {
+    if (readyWhen(trigger.value)) {
+      callback();
+    } else {
+      VoidCallback? triggerListener;
+      triggerListener = () {
+        if (readyWhen(trigger.value)) {
+          callback();
+          trigger.removeListener(triggerListener!);
+
+          _listenables.remove(trigger);
+          _listeners.remove(triggerListener);
+        }
+      };
+      addAutoDisposeListener(trigger, triggerListener);
+    }
   }
 }
 
@@ -94,6 +149,16 @@ abstract class DisposableController {
 ///   [StatefulWidget].
 mixin AutoDisposeControllerMixin on DisposableController implements Disposer {
   final Disposer _delegate = Disposer();
+
+  @override
+  @visibleForTesting
+  List<Listenable> get listenables => _delegate.listenables;
+
+  /// Not using VoidCallback because of
+  /// https://github.com/dart-lang/mockito/issues/579
+  @override
+  @visibleForTesting
+  List<void Function()> get listeners => _delegate.listeners;
 
   @override
   void dispose() {
@@ -132,7 +197,25 @@ mixin AutoDisposeControllerMixin on DisposableController implements Disposer {
   }
 
   @override
+  void cancelListener(VoidCallback? listener) {
+    _delegate.cancelListener(listener);
+  }
+
+  @override
   void cancelFocusNodes() {
     _delegate.cancelFocusNodes();
+  }
+
+  @override
+  void callOnceWhenReady<T>({
+    required VoidCallback callback,
+    required ValueListenable<T> trigger,
+    required bool Function(T triggerValue) readyWhen,
+  }) {
+    _delegate.callOnceWhenReady(
+      callback: callback,
+      trigger: trigger,
+      readyWhen: readyWhen,
+    );
   }
 }

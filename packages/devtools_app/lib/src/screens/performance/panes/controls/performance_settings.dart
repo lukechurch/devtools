@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../../../../primitives/feature_flags.dart';
 import '../../../../shared/common_widgets.dart';
 import '../../../../shared/dialogs.dart';
 import '../../../../shared/globals.dart';
@@ -17,9 +20,8 @@ class PerformanceSettingsDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return DevToolsDialog(
-      title: dialogTitleText(theme, 'Performance Settings'),
+      title: const DialogTitleText('Performance Settings'),
       includeDivider: false,
       content: Container(
         width: defaultDialogWidth,
@@ -35,7 +37,7 @@ class PerformanceSettingsDialog extends StatelessWidget {
           ],
         ),
       ),
-      actions: [
+      actions: const [
         DialogCloseButton(),
       ],
     );
@@ -78,9 +80,12 @@ class TimelineStreamSettings extends StatelessWidget {
       CheckboxSetting(
         title: 'Network',
         description: 'Http traffic',
-        notifier: controller.httpTimelineLoggingEnabled as ValueNotifier<bool?>,
-        onChanged: (value) =>
-            controller.toggleHttpRequestLogging(value ?? false),
+        notifier: controller.timelineEventsController.httpTimelineLoggingEnabled
+            as ValueNotifier<bool?>,
+        onChanged: (value) => unawaited(
+          controller.timelineEventsController
+              .toggleHttpRequestLogging(value ?? false),
+        ),
       ),
     ];
   }
@@ -110,10 +115,11 @@ class TimelineStreamSettings extends StatelessWidget {
             title: stream.name,
             description: stream.description,
             notifier: stream.recorded as ValueNotifier<bool?>,
-            onChanged: (newValue) =>
-                serviceManager.timelineStreamManager.updateTimelineStream(
-              stream,
-              newValue ?? false,
+            onChanged: (newValue) => unawaited(
+              serviceManager.timelineStreamManager.updateTimelineStream(
+                stream,
+                newValue ?? false,
+              ),
             ),
           ),
         )
@@ -134,9 +140,17 @@ class FlutterSettings extends StatelessWidget {
       children: [
         ...dialogSubHeader(Theme.of(context), 'Additional Settings'),
         CheckboxSetting(
-          notifier: controller.badgeTabForJankyFrames as ValueNotifier<bool?>,
+          notifier: controller.flutterFramesController.badgeTabForJankyFrames
+              as ValueNotifier<bool?>,
           title: 'Badge Performance tab when Flutter UI jank is detected',
         ),
+        if (FeatureFlags.embeddedPerfetto)
+          CheckboxSetting(
+            notifier: controller.timelineEventsController.useLegacyTraceViewer,
+            title: 'Use legacy trace viewer',
+            onChanged:
+                controller.timelineEventsController.toggleUseLegacyTraceViewer,
+          ),
       ],
     );
   }

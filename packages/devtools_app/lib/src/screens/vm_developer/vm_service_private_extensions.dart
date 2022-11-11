@@ -262,6 +262,16 @@ enum FunctionKind {
   }
 }
 
+extension CodeRefPrivateViewExtension on CodeRef {
+  static const _functionKey = 'function';
+
+  /// Returns the function from which this code object was generated.
+  FuncRef? get function {
+    final functionJson = json![_functionKey] as Map<String, dynamic>;
+    return FuncRef.parse(functionJson);
+  }
+}
+
 /// An extension on [Code] which allows for access to VM internal fields.
 extension CodePrivateViewExtension on Code {
   static const _disassemblyKey = '_disassembly';
@@ -346,4 +356,131 @@ extension ScriptPrivateViewExtension on Script {
 /// An extension on [Library] which allows for access to VM internal fields.
 extension LibraryPrivateExtension on Library {
   String? get vmName => json![_vmNameKey];
+}
+
+typedef ObjectStoreEntry = MapEntry<String, ObjRef>;
+
+/// A collection of VM objects stored in an isolate's object store.
+///
+/// The object store is used to provide easy and cheap access to important
+/// VM objects within the VM. Examples of objects stored in the object store
+/// include:
+///
+///   - Code stubs (e.g., allocation paths, async/await machinery)
+///   - References to core classes (e.g., `Null`, `Object`, `Never`)
+///   - Common type arguments (e.g., `<String, dynamic>`)
+///   - References to frequently accessed fields / functions (e.g.,
+///     `_objectEquals()`, `_Enum._name`)
+///   - Cached, per-isolate data (e.g., library URI mappings)
+///
+/// The object store is considered one of the GC roots by the VM's garbage
+/// collector, meaning that objects in the store will be considered live, even
+/// if they're not referenced anywhere else in the program.
+class ObjectStore {
+  const ObjectStore({
+    required this.fields,
+  });
+
+  static ObjectStore? parse(Map<String, dynamic>? json) {
+    if (json?['type'] != '_ObjectStore') {
+      return null;
+    }
+    final rawFields = json!['fields']! as Map<String, dynamic>;
+    return ObjectStore(
+      fields: rawFields.map((key, value) {
+        return ObjectStoreEntry(
+          key,
+          createServiceObject(value, ['InstanceRef']) as ObjRef,
+        );
+      }),
+    );
+  }
+
+  final Map<String, ObjRef> fields;
+}
+
+/// A `ProfileCode` contains profiling information about a Dart or native
+/// code object.
+///
+/// See [CpuSamples].
+class ProfileCode {
+  ProfileCode({
+    this.kind,
+    this.inclusiveTicks,
+    this.exclusiveTicks,
+    this.code,
+    this.ticks,
+  });
+
+  ProfileCode._fromJson(Map<String, dynamic> json) {
+    kind = json['kind'] ?? '';
+    inclusiveTicks = json['inclusiveTicks'] ?? -1;
+    exclusiveTicks = json['exclusiveTicks'] ?? -1;
+    code = createServiceObject(json['code'], const ['@Code']) as CodeRef?;
+    ticks = json['ticks'];
+  }
+  static ProfileCode? parse(Map<String, dynamic>? json) =>
+      json == null ? null : ProfileCode._fromJson(json);
+
+  /// The kind of function this object represents.
+  String? kind;
+
+  /// The number of times function appeared on the stack during sampling events.
+  int? inclusiveTicks;
+
+  /// The number of times function appeared on the top of the stack during
+  /// sampling events.
+  int? exclusiveTicks;
+
+  /// The function captured during profiling.
+  CodeRef? code;
+
+  List? ticks;
+
+  Map<String, dynamic> toJson() {
+    final json = <String, dynamic>{};
+    json.addAll({
+      'kind': kind ?? '',
+      'inclusiveTicks': inclusiveTicks ?? -1,
+      'exclusiveTicks': exclusiveTicks ?? -1,
+      'code': code?.toJson(),
+      'ticks': ticks,
+    });
+    return json;
+  }
+
+  @override
+  String toString() => '[ProfileCode ' //
+      'kind: $kind, inclusiveTicks: $inclusiveTicks, exclusiveTicks: $exclusiveTicks, ' //
+      'code: $code]';
+}
+
+extension CpuSamplePrivateView on CpuSample {
+  static final _expando = Expando<List<int>>();
+
+  List<int> get codeStack => _expando[this] ?? [];
+  void setCodeStack(List<int> stack) => _expando[this] = stack;
+}
+
+extension CpuSamplesPrivateView on CpuSamples {
+  // Used to attach the codes list to a CpuSamples instance.
+  static final _expando = Expando<List<ProfileCode>>();
+
+  static const _kCodesKey = '_codes';
+
+  bool get hasCodes {
+    return _expando[this] != null || json!.containsKey(_kCodesKey);
+  }
+
+  List<ProfileCode> get codes {
+    var _codes = _expando[this];
+    if (_codes == null) {
+      _codes = json![_kCodesKey]
+          .cast<Map<String, dynamic>>()
+          .map<ProfileCode>((e) => ProfileCode.parse(e)!)
+          .toList();
+      _expando[this] = _codes;
+    }
+    return _codes!;
+  }
 }

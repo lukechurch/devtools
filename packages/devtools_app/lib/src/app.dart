@@ -21,6 +21,8 @@ import 'framework/notifications_view.dart';
 import 'framework/release_notes/release_notes.dart';
 import 'framework/report_feedback_button.dart';
 import 'framework/scaffold.dart';
+import 'idg/idg_controller.dart';
+import 'idg/idg_screen.dart';
 import 'primitives/auto_dispose_mixin.dart';
 import 'screens/app_size/app_size_controller.dart';
 import 'screens/app_size/app_size_screen.dart';
@@ -30,7 +32,6 @@ import 'screens/inspector/inspector_controller.dart';
 import 'screens/inspector/inspector_screen.dart';
 import 'screens/inspector/inspector_tree_controller.dart';
 import 'screens/inspector/primitives/inspector_common.dart';
-import 'screens/logging/logging_controller.dart';
 import 'screens/logging/logging_screen.dart';
 import 'screens/memory/memory_controller.dart';
 import 'screens/memory/memory_screen.dart';
@@ -51,10 +52,8 @@ import 'shared/routing.dart';
 import 'shared/screen.dart';
 import 'shared/snapshot_screen.dart';
 import 'shared/theme.dart';
+import 'ui/hover.dart';
 import 'ui/icons.dart';
-
-import 'idg/idg_controller.dart';
-import 'idg/idg_screen.dart';
 
 // Assign to true to use a sample implementation of a conditional screen.
 // WARNING: Do not check in this file if debugEnableSampleScreen is true.
@@ -63,11 +62,7 @@ const debugEnableSampleScreen = false;
 // Disabled until VM developer mode functionality is added.
 const showVmDeveloperMode = false;
 
-/// Whether this DevTools build is external.
-bool isExternalBuild = true;
-
 /// Top-level configuration for the app.
-@immutable
 class DevToolsApp extends StatefulWidget {
   const DevToolsApp(
     this.screens,
@@ -99,6 +94,8 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
   bool get denseModeEnabled => _denseModeEnabled;
   bool _denseModeEnabled = false;
 
+  final hoverCardController = HoverCardController();
+
   late ReleaseNotesController releaseNotesController;
   late IDGController idgController;
 
@@ -106,7 +103,7 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
   void initState() {
     super.initState();
 
-    ga.setupDimensions();
+    unawaited(ga.setupDimensions());
 
     addAutoDisposeListener(serviceManager.isolateManager.mainIsolate, () {
       setState(() {
@@ -330,8 +327,15 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
         theme: Theme.of(context),
       ),
       builder: (context, child) {
-        return Provider<AnalyticsController>.value(
-          value: widget.analyticsController,
+        return MultiProvider(
+          providers: [
+            Provider<AnalyticsController>.value(
+              value: widget.analyticsController,
+            ),
+            Provider<HoverCardController>.value(
+              value: hoverCardController,
+            ),
+          ],
           child: NotificationsView(
             child: ReleaseNotesViewer(
               releaseNotesController: releaseNotesController,
@@ -504,7 +508,7 @@ class SettingsDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final analyticsController = Provider.of<AnalyticsController>(context);
     return DevToolsDialog(
-      title: dialogTitleText(Theme.of(context), 'Settings'),
+      title: const DialogTitleText('Settings'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -536,7 +540,7 @@ class SettingsDialog extends StatelessWidget {
           ),
         ],
       ),
-      actions: [
+      actions: const [
         DialogCloseButton(),
       ],
     );
@@ -596,7 +600,6 @@ class CheckboxSetting extends StatelessWidget {
 /// Conditional screens can be added to this list, and they will automatically
 /// be shown or hidden based on the [Screen.conditionalLibrary] provided.
 List<DevToolsScreen> get defaultScreens {
-  final vmDeveloperToolsController = VMDeveloperToolsController();
   return <DevToolsScreen>[
     DevToolsScreen<InspectorController>(
       const InspectorScreen(),
@@ -639,7 +642,7 @@ List<DevToolsScreen> get defaultScreens {
     ),
     DevToolsScreen<VMDeveloperToolsController>(
       const VMDeveloperToolsScreen(),
-      controller: vmDeveloperToolsController,
+      createController: () => VMDeveloperToolsController(),
     ),
     // Show the sample DevTools screen.
     if (debugEnableSampleScreen && (kDebugMode || kProfileMode))

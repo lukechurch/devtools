@@ -4,6 +4,7 @@
 
 import 'dart:async';
 
+import 'package:devtools_shared/devtools_shared.dart';
 import 'package:flutter/material.dart';
 
 import '../../analytics/analytics.dart' as ga;
@@ -17,17 +18,16 @@ import '../../shared/banner_messages.dart';
 import '../../shared/common_widgets.dart';
 import '../../shared/globals.dart';
 import '../../shared/screen.dart';
-import '../../shared/split.dart';
 import '../../shared/theme.dart';
 import '../../shared/utils.dart';
-import '../../shared/version.dart';
 import '../../ui/icons.dart';
 import '../../ui/vm_flag_widgets.dart';
-import 'event_details.dart';
-import 'flutter_frames_chart.dart';
 import 'panes/controls/enhance_tracing/enhance_tracing.dart';
 import 'panes/controls/layer_debugging_options.dart';
 import 'panes/controls/performance_settings.dart';
+import 'panes/flutter_frames/flutter_frames_chart.dart';
+import 'panes/flutter_frames/flutter_frames_controller.dart';
+import 'panes/timeline_events/timeline_events_controller.dart';
 import 'performance_controller.dart';
 import 'performance_model.dart';
 import 'tabbed_performance_view.dart';
@@ -70,6 +70,10 @@ class PerformanceScreenBodyState extends State<PerformanceScreenBody>
 
   double processingProgress = 0.0;
 
+  late TimelineEventsController _timelineEventsController;
+
+  late FlutterFramesController _flutterFramesController;
+
   @override
   void initState() {
     super.initState();
@@ -97,23 +101,28 @@ class PerformanceScreenBodyState extends State<PerformanceScreenBody>
 
     if (!initController()) return;
 
+    _timelineEventsController = controller.timelineEventsController;
+    _flutterFramesController = controller.flutterFramesController;
+
     cancelListeners();
 
-    processing = controller.processing.value;
-    addAutoDisposeListener(controller.processing, () {
+    processing = controller.timelineEventsController.processing.value;
+    addAutoDisposeListener(controller.timelineEventsController.processing, () {
       setState(() {
-        processing = controller.processing.value;
+        processing = controller.timelineEventsController.processing.value;
       });
     });
 
-    processingProgress = controller.processor.progressNotifier.value;
-    addAutoDisposeListener(controller.processor.progressNotifier, () {
+    final legacyProcessor =
+        _timelineEventsController.legacyController.processor;
+    processingProgress = legacyProcessor.progressNotifier.value;
+    addAutoDisposeListener(legacyProcessor.progressNotifier, () {
       setState(() {
-        processingProgress = controller.processor.progressNotifier.value;
+        processingProgress = legacyProcessor.progressNotifier.value;
       });
     });
 
-    addAutoDisposeListener(controller.selectedFrame);
+    addAutoDisposeListener(_flutterFramesController.selectedFrame);
 
     // Load offline timeline data if available.
     if (shouldLoadOfflineData()) {
@@ -129,7 +138,7 @@ class PerformanceScreenBodyState extends State<PerformanceScreenBody>
         });
       final offlinePerformanceData = OfflinePerformanceData.parse(timelineJson);
       if (!offlinePerformanceData.isEmpty) {
-        loadOfflineData(offlinePerformanceData);
+        unawaited(loadOfflineData(offlinePerformanceData));
       }
     }
   }
@@ -141,7 +150,6 @@ class PerformanceScreenBodyState extends State<PerformanceScreenBody>
         controller.offlinePerformanceData!.frames.isNotEmpty;
 
     final tabbedPerformanceView = TabbedPerformanceView(
-      controller: controller,
       processing: processing,
       processingProgress: processingProgress,
     );
@@ -152,33 +160,8 @@ class PerformanceScreenBodyState extends State<PerformanceScreenBody>
         if (isOfflineFlutterApp ||
             (!offlineController.offlineMode.value &&
                 serviceManager.connectedApp!.isFlutterAppNow!))
-          DualValueListenableBuilder<List<FlutterFrame>, double>(
-            firstListenable: controller.flutterFrames,
-            secondListenable: controller.displayRefreshRate,
-            builder: (context, frames, displayRefreshRate, child) {
-              return FlutterFramesChart(
-                frames,
-                displayRefreshRate,
-              );
-            },
-          ),
-        Expanded(
-          child: embeddedPerfettoEnabled
-              ? tabbedPerformanceView
-              : Split(
-                  axis: Axis.vertical,
-                  initialFractions: const [0.7, 0.3],
-                  children: [
-                    tabbedPerformanceView,
-                    ValueListenableBuilder<TimelineEvent?>(
-                      valueListenable: controller.selectedTimelineEvent,
-                      builder: (context, selectedEvent, _) {
-                        return EventDetails(selectedEvent);
-                      },
-                    ),
-                  ],
-                ),
-        ),
+          FlutterFramesChart(_flutterFramesController),
+        Expanded(child: tabbedPerformanceView),
       ],
     );
 
@@ -231,62 +214,42 @@ class _PrimaryControls extends StatelessWidget {
     Key? key,
     required this.controller,
     required this.processing,
-    this.onClear,
+    required this.onClear,
   }) : super(key: key);
 
   final PerformanceController controller;
 
   final bool processing;
 
-  final VoidCallback? onClear;
+  final VoidCallback onClear;
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: controller.recordingFrames,
-      builder: (context, recording, child) {
-        return Row(
-          children: [
-            OutlinedIconButton(
-              icon: Icons.pause,
-              tooltip: 'Pause frame recording',
-              onPressed: recording ? _pauseFrameRecording : null,
-            ),
-            const SizedBox(width: denseSpacing),
-            OutlinedIconButton(
-              icon: Icons.play_arrow,
-              tooltip: 'Resume frame recording',
-              onPressed: recording ? null : _resumeFrameRecording,
-            ),
-            const SizedBox(width: denseSpacing),
-            child!,
-          ],
-        );
-      },
-      child: OutlinedIconButton(
-        icon: Icons.block,
-        tooltip: 'Clear',
-        onPressed: processing ? null : _clearPerformanceData,
-      ),
+    return Row(
+      children: [
+        if (serviceManager.connectedApp!.isFlutterAppNow!) ...[
+          ChartVisibilityButton(
+            showChart:
+                controller.flutterFramesController.showFlutterFramesChart,
+            onPressed:
+                controller.flutterFramesController.toggleShowFlutterFrames,
+            label: 'Flutter frames',
+          ),
+          const SizedBox(width: denseSpacing),
+        ],
+        OutlinedIconButton(
+          icon: Icons.block,
+          tooltip: 'Clear all data on the Performance screen',
+          onPressed: processing ? null : _clearPerformanceData,
+        ),
+      ],
     );
-  }
-
-  void _pauseFrameRecording() {
-    ga.select(analytics_constants.performance, analytics_constants.pause);
-    controller.toggleRecordingFrames(false);
-  }
-
-  void _resumeFrameRecording() {
-    ga.select(analytics_constants.performance, analytics_constants.resume);
-    controller.toggleRecordingFrames(true);
   }
 
   Future<void> _clearPerformanceData() async {
     ga.select(analytics_constants.performance, analytics_constants.clear);
     await controller.clearData();
-    if (onClear != null) {
-      onClear!();
-    }
+    onClear();
   }
 }
 
@@ -296,7 +259,7 @@ class SecondaryPerformanceControls extends StatelessWidget {
     required this.controller,
   }) : super(key: key);
 
-  static const minScreenWidthForTextBeforeScaling = 1075.0;
+  static const minScreenWidthForTextBeforeScaling = 1140.0;
 
   final PerformanceController controller;
 
@@ -324,8 +287,11 @@ class SecondaryPerformanceControls extends StatelessWidget {
         const SizedBox(width: denseSpacing),
         ProfileGranularityDropdown(
           screenId: PerformanceScreen.id,
-          profileGranularityFlagNotifier:
-              controller.cpuProfilerController.profileGranularityFlagNotifier!,
+          profileGranularityFlagNotifier: controller
+              .timelineEventsController
+              .legacyController
+              .cpuProfilerController
+              .profileGranularityFlagNotifier!,
         ),
         const SizedBox(width: defaultSpacing),
         OutlinedIconButton(
@@ -352,9 +318,11 @@ class SecondaryPerformanceControls extends StatelessWidget {
   }
 
   void _openSettingsDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => PerformanceSettingsDialog(controller),
+    unawaited(
+      showDialog(
+        context: context,
+        builder: (context) => PerformanceSettingsDialog(controller),
+      ),
     );
   }
 }

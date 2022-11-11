@@ -2,7 +2,7 @@ import 'dart:async';
 
 import '../../../devtools_app.dart' as devtools_app;
 import '../../shared/globals.dart';
-import '../../shared/table.dart';
+import '../../shared/table/table.dart';
 import '../idg_controller.dart';
 import '../idg_core.dart' as idg_core;
 
@@ -32,7 +32,7 @@ var _s1 = idg_core.Step(
       Press the Snapshot button to collect information about all objects in the
       Dart VM Heap''',
   imageUrl:
-      '/Users/lukechurch/GitRepos/devtools/case_study/memory_leaks/images_1_null_safe/readme_images/table_first.png',
+      '/Users/lukechurch/GitRepos/devtools/case_study/memory_leaks/images_1/readme_images/table_first.png',
   nextStepGuard: idg_core.MaskUntil(
     () => _s0.isDone,
     idg_core.PresenceSensor('mem-snapshot', 'snapshot taken'),

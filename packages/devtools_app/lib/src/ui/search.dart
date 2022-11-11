@@ -197,7 +197,7 @@ mixin SearchControllerMixin<T extends DataSearchStateMixin> {
   }
 
   void disposeSearch() {
-    _searchOperation?.cancel();
+    unawaited(_searchOperation?.cancel());
     if (_searchDebounce?.isActive ?? false) {
       _searchDebounce!.cancel();
     }
@@ -353,11 +353,13 @@ class AutoCompleteState extends State<AutoComplete> with AutoDisposeMixin {
         offset: Offset(xCoord, yCoord),
         child: Material(
           elevation: defaultElevation,
-          child: ListView(
-            padding: EdgeInsets.zero,
-            shrinkWrap: true,
-            itemExtent: tileEntryHeight,
-            children: autoCompleteTiles,
+          child: TextFieldTapRegion(
+            child: ListView(
+              padding: EdgeInsets.zero,
+              shrinkWrap: true,
+              itemExtent: tileEntryHeight,
+              children: autoCompleteTiles,
+            ),
           ),
         ),
       ),
@@ -585,7 +587,7 @@ mixin AutoCompleteSearchControllerMixin on SearchControllerMixin {
       maxWidth: maxWidth,
     );
 
-    Overlay.of(context)!.insert(autoCompleteOverlay!);
+    Overlay.of(context).insert(autoCompleteOverlay!);
   }
 
   /// Until an expression parser, poor man's way of finding the parts for
@@ -935,7 +937,7 @@ class _SearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textStyle = style ?? Theme.of(context).textTheme.subtitle1;
+    final textStyle = style ?? Theme.of(context).textTheme.titleMedium;
 
     final searchField = TextField(
       key: searchFieldKey,
@@ -1254,7 +1256,7 @@ class SearchNavigationControls extends StatelessWidget {
                     child: isSearchInProgress
                         ? SmallCircularProgressIndicator(
                             valueColor: AlwaysStoppedAnimation<Color?>(
-                              Theme.of(context).textTheme.bodyText2!.color,
+                              Theme.of(context).textTheme.bodyMedium!.color,
                             ),
                           )
                         : const SizedBox(),

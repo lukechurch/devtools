@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:async';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
@@ -66,7 +68,7 @@ class _AnalyticsPromptState extends State<AnalyticsPrompt>
                 children: [
                   Text(
                     'Send usage statistics for DevTools?',
-                    style: textTheme.headline5,
+                    style: textTheme.headlineSmall,
                   ),
                   CircularIconButton(
                     icon: Icons.close,
@@ -97,23 +99,25 @@ class _AnalyticsPromptState extends State<AnalyticsPrompt>
             text: 'DevTools reports feature usage statistics and basic '
                 'crash reports to Google in order to help Google improve '
                 'the tool over time. See Google\'s ',
-            style: textTheme.subtitle1,
+            style: textTheme.titleMedium,
           ),
           TextSpan(
             text: 'privacy policy',
             style:
-                textTheme.subtitle1?.copyWith(color: const Color(0xFF54C1EF)),
+                textTheme.titleMedium?.copyWith(color: const Color(0xFF54C1EF)),
             recognizer: TapGestureRecognizer()
               ..onTap = () {
-                launchUrl(
-                  'https://www.google.com/intl/en/policies/privacy',
-                  context,
+                unawaited(
+                  launchUrl(
+                    'https://www.google.com/intl/en/policies/privacy',
+                    context,
+                  ),
                 );
               },
           ),
           TextSpan(
             text: '.',
-            style: textTheme.subtitle1,
+            style: textTheme.titleMedium,
           ),
         ],
       ),
@@ -127,7 +131,7 @@ class _AnalyticsPromptState extends State<AnalyticsPrompt>
         ElevatedButton(
           onPressed: () {
             // This will also hide the prompt.
-            controller.toggleAnalyticsEnabled(false);
+            unawaited(controller.toggleAnalyticsEnabled(false));
           },
           style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
           child: const Text('No thanks.'),
@@ -137,9 +141,8 @@ class _AnalyticsPromptState extends State<AnalyticsPrompt>
         ),
         ElevatedButton(
           onPressed: () {
-            controller
-              ..toggleAnalyticsEnabled(true)
-              ..hidePrompt();
+            unawaited(controller.toggleAnalyticsEnabled(true));
+            controller.hidePrompt();
           },
           child: const Text('Sounds good!'),
         ),

@@ -7,12 +7,18 @@ import '../config_specific/import_export/import_export.dart';
 import '../extension_points/extensions_base.dart';
 import '../primitives/message_bus.dart';
 import '../primitives/storage.dart';
+import '../screens/debugger/breakpoint_manager.dart';
 import '../scripts/script_manager.dart';
 import '../service/service_manager.dart';
 import '../shared/notifications.dart';
 import 'framework_controller.dart';
 import 'preferences.dart';
 import 'survey.dart';
+
+/// Whether this DevTools build is external.
+bool get isExternalBuild => _isExternalBuild;
+bool _isExternalBuild = true;
+void setInternalBuild() => _isExternalBuild = false;
 
 final Map<Type, dynamic> globals = <Type, dynamic>{};
 
@@ -39,6 +45,8 @@ OfflineModeController get offlineController => globals[OfflineModeController];
 IdeTheme get ideTheme => globals[IdeTheme];
 
 NotificationService get notificationService => globals[NotificationService];
+
+BreakpointManager get breakpointManager => globals[BreakpointManager];
 
 void setGlobal(Type clazz, dynamic instance) {
   globals[clazz] = instance;

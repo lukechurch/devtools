@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -9,12 +11,12 @@ class ChannelDemo extends StatefulWidget {
 class _ChannelDemoState extends State<ChannelDemo> {
   static const sendMessage = 'Send message by clicking the "Mail" button below';
 
-  BasicMessageChannel<String> _channel;
+  late BasicMessageChannel<String> _channel;
 
-  String _response;
+  late String _response;
 
   void _sendMessage() {
-    _channel.send('Message from Dart');
+    unawaited(_channel.send('Message from Dart'));
   }
 
   void _reset() {
@@ -28,9 +30,11 @@ class _ChannelDemoState extends State<ChannelDemo> {
     super.initState();
     _response = sendMessage;
     _channel = const BasicMessageChannel<String>('shuttle', StringCodec());
-    _channel.setMessageHandler((String response) {
-      setState(() => _response = response);
-      return null;
+    _channel.setMessageHandler((String? response) async {
+      if (response != null) {
+        setState(() => _response = response);
+      }
+      return '';
     });
   }
 

@@ -2,22 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:vm_service/vm_service.dart';
 
+import '../../../../analytics/analytics.dart' as ga;
+import '../../../../analytics/constants.dart' as analytics_constants;
 import '../../../../config_specific/import_export/import_export.dart';
 import '../../../../primitives/auto_dispose.dart';
 import '../../../../shared/globals.dart';
-import '../../../vm_developer/vm_service_private_extensions.dart';
+import 'model.dart';
 
 class AllocationProfileTableViewController extends DisposableController
     with AutoDisposeControllerMixin {
   final _exportController = ExportController();
 
-  /// The current [AllocationProfile] being displayed.
-  ValueListenable<AllocationProfile?> get currentAllocationProfile =>
+  /// The current profile being displayed.
+  ValueListenable<AdaptedAllocationProfile?> get currentAllocationProfile =>
       _currentAllocationProfile;
-  final _currentAllocationProfile = ValueNotifier<AllocationProfile?>(null);
+  final _currentAllocationProfile =
+      ValueNotifier<AdaptedAllocationProfile?>(null);
 
   /// Specifies if the allocation profile should be refreshed when a GC event
   /// is received.
@@ -28,21 +33,19 @@ class AllocationProfileTableViewController extends DisposableController
 
   void initialize() {
     if (_initialized) {
-      throw StateError(
-        "'AllocationProfileController' has already been initialized.",
-      );
+      return;
     }
     autoDisposeStreamSubscription(
       serviceManager.service!.onGCEvent.listen((event) {
         if (refreshOnGc.value) {
-          refresh();
+          unawaited(refresh());
         }
       }),
     );
     addAutoDisposeListener(serviceManager.isolateManager.selectedIsolate, () {
-      refresh();
+      unawaited(refresh());
     });
-    refresh();
+    unawaited(refresh());
     _initialized = true;
   }
 
@@ -62,56 +65,63 @@ class AllocationProfileTableViewController extends DisposableController
     final service = serviceManager.service!;
     final isolate = serviceManager.isolateManager.selectedIsolate.value;
     final allocationProfile = await service.getAllocationProfile(isolate!.id!);
-    _currentAllocationProfile.value = allocationProfile;
+    _currentAllocationProfile.value =
+        AdaptedAllocationProfile.fromAllocationProfile(allocationProfile);
   }
 
   /// Converts the current [AllocationProfile] to CSV format and downloads it.
   ///
   /// The returned string is the name of the downloaded CSV file.
-  String downloadMemoryTableCsv(AllocationProfile profile) {
+  void downloadMemoryTableCsv(AdaptedAllocationProfile profile) {
+    ga.select(
+      analytics_constants.memory,
+      analytics_constants.MemoryEvent.profileDownloadCsv,
+    );
     final csvBuffer = StringBuffer();
 
     // Write the headers first.
     csvBuffer.writeln(
       [
         'Class',
+        'Library',
         'Total Instances',
         'Total Size',
-        'Total Internal Size',
+        'Total Dart Heap Size',
         'Total External Size',
         'New Space Instances',
         'New Space Size',
-        'New Space Internal Size',
+        'New Space Dart Heap Size',
         'New Space External Size',
         'Old Space Instances',
         'Old Space Size',
-        'Old Space Internal Size',
+        'Old Space Dart Heap Size',
         'Old Space External Size',
       ].map((e) => '"$e"').join(','),
     );
     // Write a row for each entry in the profile.
-    for (final member in profile.members!) {
+    for (final member in profile.records) {
+      if (member.isTotal) continue;
+
       csvBuffer.writeln(
         [
-          member.classRef!.name,
-          member.instancesCurrent,
-          member.bytesCurrent! +
-              member.oldSpace.externalSize +
-              member.newSpace.externalSize,
-          member.bytesCurrent!,
-          member.oldSpace.externalSize + member.newSpace.externalSize,
-          member.newSpace.count,
-          member.newSpace.size + member.newSpace.externalSize,
-          member.newSpace.size,
-          member.newSpace.externalSize,
-          member.oldSpace.count,
-          member.oldSpace.size + member.oldSpace.externalSize,
-          member.oldSpace.size,
-          member.oldSpace.externalSize,
+          member.heapClass.className,
+          member.heapClass.library,
+          member.totalInstances,
+          member.totalSize,
+          member.totalDartHeapSize,
+          member.totalExternalSize,
+          member.newSpaceInstances,
+          member.newSpaceSize,
+          member.newSpaceDartHeapSize,
+          member.newSpaceExternalSize,
+          member.oldSpaceInstances,
+          member.oldSpaceSize,
+          member.oldSpaceDartHeapSize,
+          member.oldSpaceExternalSize,
         ].join(','),
       );
     }
-    return _exportController.downloadFile(
+    _exportController.downloadFile(
       csvBuffer.toString(),
       type: ExportFileType.csv,
     );

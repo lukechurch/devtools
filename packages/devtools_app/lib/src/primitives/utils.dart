@@ -315,9 +315,9 @@ Stream combineStreams(Stream a, Stream b, Stream c) {
       csub = c.listen(controller.add);
     },
     onCancel: () {
-      asub?.cancel();
-      bsub?.cancel();
-      csub?.cancel();
+      unawaited(asub?.cancel());
+      unawaited(bsub?.cancel());
+      unawaited(csub?.cancel());
     },
   );
 
@@ -484,11 +484,13 @@ class RateLimiter {
       // request. The existing request has already started so may return state
       // that is now out of date.
       requestScheduledButNotStarted = true;
-      _pendingRequest!.future.whenComplete(() {
-        _pendingRequest = null;
-        requestScheduledButNotStarted = false;
-        scheduleRequest();
-      });
+      unawaited(
+        _pendingRequest!.future.whenComplete(() {
+          _pendingRequest = null;
+          requestScheduledButNotStarted = false;
+          scheduleRequest();
+        }),
+      );
       return;
     }
 
@@ -541,6 +543,17 @@ enum TimeUnit {
 class TimeRange {
   TimeRange({this.singleAssignment = true});
 
+  factory TimeRange.offset({
+    required TimeRange original,
+    required Duration offset,
+  }) {
+    final originalStart = original.start;
+    final originalEnd = original.end;
+    return TimeRange()
+      ..start = originalStart != null ? originalStart + offset : null
+      ..end = originalEnd != null ? originalEnd + offset : null;
+  }
+
   final bool singleAssignment;
 
   Duration? get start => _start;
@@ -551,9 +564,9 @@ class TimeRange {
     if (singleAssignment) {
       assert(_start == null);
     }
-    if (_end != null) {
+    if (value != null && _end != null) {
       assert(
-        value! <= _end!,
+        value <= _end!,
         '$value is not less than or equal to end time $_end',
       );
     }
@@ -568,9 +581,9 @@ class TimeRange {
     if (singleAssignment) {
       assert(_end == null);
     }
-    if (_start != null) {
+    if (value != null && _start != null) {
       assert(
-        value! >= _start!,
+        value >= _start!,
         '$value is not greater than or equal to start time $_start',
       );
     }
@@ -776,6 +789,30 @@ class Range {
 enum SortDirection {
   ascending,
   descending,
+}
+
+/// A Range-like class that works for inclusive ranges of lines in source code.
+class LineRange {
+  const LineRange(this.begin, this.end) : assert(begin <= end);
+
+  final int begin;
+  final int end;
+
+  int get size => end - begin + 1;
+
+  bool contains(num target) => target >= begin && target <= end;
+
+  @override
+  String toString() => 'LineRange($begin, $end)';
+
+  @override
+  bool operator ==(other) {
+    if (other is! LineRange) return false;
+    return begin == other.begin && end == other.end;
+  }
+
+  @override
+  int get hashCode => Object.hash(begin, end);
 }
 
 extension SortDirectionExtension on SortDirection {
@@ -1093,6 +1130,10 @@ extension ListExtension<T> on List<T> {
   }
 }
 
+extension UiListExtension<T> on List<T> {
+  int get numSpacers => max(0, length - 1);
+}
+
 Map<String, String> devToolsQueryParams(String url) {
   // DevTools urls can have the form:
   // http://localhost:123/?key=value
@@ -1291,6 +1332,15 @@ class ListValueNotifier<T> extends ChangeNotifier
     _rawList.removeRange(start, end);
     _listChanged();
   }
+
+  /// Removes the object at position `index` from this list.
+  ///
+  /// https://api.flutter.dev/flutter/dart-core/List/removeAt.html
+  void removeAt(int index) {
+    _rawList = _rawList.toList();
+    _rawList.removeAt(index);
+    _listChanged();
+  }
 }
 
 /// Wrapper for a list that prevents any modification of the list's content.
@@ -1477,3 +1527,24 @@ bool isPrimativeInstanceKind(String? kind) {
 /// Returns the file name from a URI or path string, by splitting the [uri] at
 /// the directory separators '/', and returning the last element.
 String? fileNameFromUri(String? uri) => uri?.split('/').last;
+
+/// Calculates subtraction of two maps.
+///
+/// Result map keys is union of the imput maps' keys.
+Map<K, R> subtractMaps<K, F, S, R>({
+  required Map<K, S>? substract,
+  required Map<K, F>? from,
+  required R? Function({required S? subtract, required F? from}) subtractor,
+}) {
+  from ??= <K, F>{};
+  substract ??= <K, S>{};
+
+  final result = <K, R>{};
+  final unionOfKeys = from.keys.toSet().union(substract.keys.toSet());
+
+  for (var key in unionOfKeys) {
+    final diff = subtractor(from: from[key], subtract: substract[key]);
+    if (diff != null) result[key] = diff;
+  }
+  return result;
+}

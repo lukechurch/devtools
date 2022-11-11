@@ -11,19 +11,21 @@ import '../../primitives/auto_dispose_mixin.dart';
 import '../../primitives/utils.dart';
 import '../../shared/globals.dart';
 import '../../ui/search.dart';
-import 'debugger_controller.dart';
+import 'codeview_controller.dart';
 import 'debugger_model.dart';
 
 const int numOfMatchesToShow = 10;
+
+const noResultsMsg = 'No files found.';
 
 final _fileNamesCache = <String, String>{};
 
 class FileSearchField extends StatefulWidget {
   const FileSearchField({
-    required this.debuggerController,
+    required this.codeViewController,
   });
 
-  final DebuggerController debuggerController;
+  final CodeViewController codeViewController;
 
   @override
   FileSearchFieldState createState() => FileSearchFieldState();
@@ -100,7 +102,9 @@ class FileSearchFieldState extends State<FileSearchField>
 
     final searchResults = _createSearchResults(currentQuery, scripts);
     if (searchResults.scriptRefs.isEmpty) {
-      autoCompleteController.searchAutoComplete.value = [];
+      autoCompleteController.searchAutoComplete.value = [
+        AutoCompleteMatch(noResultsMsg),
+      ];
     } else {
       searchResults.topMatches.scriptRefs.forEach(_addScriptRefToCache);
       autoCompleteController.searchAutoComplete.value =
@@ -126,14 +130,18 @@ class FileSearchFieldState extends State<FileSearchField>
   }
 
   void _onSelection(String scriptUri) {
+    if (scriptUri == noResultsMsg) {
+      _onClose();
+      return;
+    }
     final scriptRef = _scriptsCache[scriptUri]!;
-    widget.debuggerController.showScriptLocation(ScriptLocation(scriptRef));
+    widget.codeViewController.showScriptLocation(ScriptLocation(scriptRef));
     _onClose();
   }
 
   void _onClose() {
     autoCompleteController.closeAutoCompleteOverlay();
-    widget.debuggerController.toggleFileOpenerVisibility(false);
+    widget.codeViewController.toggleFileOpenerVisibility(false);
     _fileNamesCache.clear();
     _scriptsCache.clear();
   }

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:async';
+
 import 'package:devtools_shared/devtools_shared.dart';
 import 'package:flutter/material.dart';
 
@@ -164,7 +166,7 @@ class _AppSizeBodyState extends State<AppSizeBody>
     super.didChangeDependencies();
     if (!initController()) return;
 
-    maybeLoadAppSizeFiles();
+    unawaited(maybeLoadAppSizeFiles());
 
     addAutoDisposeListener(controller.activeDiffTreeType);
   }
@@ -200,7 +202,7 @@ class _AppSizeBodyState extends State<AppSizeBody>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   TabBar(
-                    labelColor: Theme.of(context).textTheme.bodyText1!.color,
+                    labelColor: Theme.of(context).textTheme.bodyLarge!.color,
                     isScrollable: true,
                     controller: _tabController,
                     tabs: tabs,
@@ -419,7 +421,7 @@ class _AnalysisViewState extends State<AnalysisView>
               AppSizeScreen.loadingMessage,
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Theme.of(context).textTheme.headline1!.color,
+                color: Theme.of(context).textTheme.displayLarge!.color,
               ),
             ),
           );
@@ -592,7 +594,7 @@ class _DiffViewState extends State<DiffView>
         AppSizeScreen.loadingMessage,
         textAlign: TextAlign.center,
         style: TextStyle(
-          color: Theme.of(context).textTheme.headline1!.color,
+          color: Theme.of(context).textTheme.displayLarge!.color,
         ),
       ),
     );

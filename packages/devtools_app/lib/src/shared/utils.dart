@@ -24,7 +24,7 @@ import 'globals.dart';
 /// Shows a `successMessage` [Notification] on the passed in `context`.
 Future<void> copyToClipboard(
   String data,
-  String successMessage,
+  String? successMessage,
   BuildContext context,
 ) async {
   await Clipboard.setData(
@@ -33,7 +33,7 @@ Future<void> copyToClipboard(
     ),
   );
 
-  notificationService.push(successMessage);
+  if (successMessage != null) notificationService.push(successMessage);
 }
 
 /// Logging to debug console only in debug runs.
@@ -55,24 +55,6 @@ bool isDense() {
 }
 
 bool isEmbedded() => ideTheme.embed;
-
-mixin CompareMixin implements Comparable {
-  bool operator <(other) {
-    return compareTo(other) < 0;
-  }
-
-  bool operator >(other) {
-    return compareTo(other) > 0;
-  }
-
-  bool operator <=(other) {
-    return compareTo(other) <= 0;
-  }
-
-  bool operator >=(other) {
-    return compareTo(other) >= 0;
-  }
-}
 
 extension VmExtension on VM {
   List<IsolateRef> isolatesForDevToolsMode() {

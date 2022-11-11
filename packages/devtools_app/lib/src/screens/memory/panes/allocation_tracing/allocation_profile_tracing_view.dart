@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../../../../analytics/analytics.dart' as ga;
 import '../../../../analytics/constants.dart' as analytics_constants;
 import '../../../../shared/common_widgets.dart';
 import '../../../../shared/split.dart';
@@ -29,7 +32,8 @@ class AllocationProfileTracingViewState
   @override
   void initState() {
     super.initState();
-    controller = AllocationProfileTracingViewController()..initialize();
+    controller = AllocationProfileTracingViewController();
+    unawaited(controller.initialize());
   }
 
   @override
@@ -40,8 +44,26 @@ class AllocationProfileTracingViewState
         Row(
           children: [
             RefreshButton(
+              tooltip: 'Request the set of updated allocation traces',
               onPressed: () async {
+                ga.select(
+                  analytics_constants.memory,
+                  analytics_constants.MemoryEvent.tracingRefresh,
+                );
                 await controller.refresh();
+              },
+            ),
+            const SizedBox(
+              width: denseSpacing,
+            ),
+            ClearButton(
+              tooltip: 'Clear the set of previously collected traces',
+              onPressed: () async {
+                ga.select(
+                  analytics_constants.memory,
+                  analytics_constants.MemoryEvent.tracingClear,
+                );
+                await controller.clear();
               },
             ),
             const _ProfileHelpLink(),
@@ -72,7 +94,8 @@ class AllocationProfileTracingViewState
 class _ProfileHelpLink extends StatelessWidget {
   const _ProfileHelpLink({Key? key}) : super(key: key);
 
-  static const _documentationTopic = 'allocationTracing';
+  static const _documentationTopic =
+      analytics_constants.MemoryEvent.tracingHelp;
 
   @override
   Widget build(BuildContext context) {

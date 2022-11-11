@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -13,10 +15,11 @@ import '../../http/http_request_data.dart';
 import '../../primitives/auto_dispose_mixin.dart';
 import '../../primitives/utils.dart';
 import '../../shared/common_widgets.dart';
+import '../../shared/globals.dart';
 import '../../shared/screen.dart';
 import '../../shared/split.dart';
-import '../../shared/table.dart';
-import '../../shared/table_data.dart';
+import '../../shared/table/table.dart';
+import '../../shared/table/table_data.dart';
 import '../../shared/theme.dart';
 import '../../shared/utils.dart';
 import '../../ui/filter.dart';
@@ -47,7 +50,7 @@ class NetworkScreen extends Screen {
   @override
   Widget buildStatus(BuildContext context) {
     final networkController = Provider.of<NetworkController>(context);
-    final color = Theme.of(context).textTheme.bodyText2!.color!;
+    final color = Theme.of(context).textTheme.bodyMedium!.color!;
 
     return DualValueListenableBuilder<NetworkRequests, List<NetworkRequest>>(
       firstListenable: networkController.requests,
@@ -124,7 +127,15 @@ class _NetworkScreenBodyState extends State<NetworkScreenBody>
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!initController()) return;
-    controller.startRecording();
+    unawaited(controller.startRecording());
+
+    cancelListeners();
+
+    addAutoDisposeListener(serviceManager.isolateManager.mainIsolate, () {
+      if (serviceManager.isolateManager.mainIsolate.value != null) {
+        unawaited(controller.startRecording());
+      }
+    });
   }
 
   @override
@@ -241,7 +252,7 @@ class _NetworkProfilerControlsState extends State<_NetworkProfilerControls>
               analytics_constants.network,
               analytics_constants.clear,
             );
-            widget.controller.clear();
+            unawaited(widget.controller.clear());
           },
         ),
         const SizedBox(width: defaultSpacing),
@@ -268,12 +279,14 @@ class _NetworkProfilerControlsState extends State<_NetworkProfilerControls>
   }
 
   void _showFilterDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => FilterDialog<NetworkController, NetworkRequest>(
-        controller: widget.controller,
-        queryInstructions: NetworkScreenBody.filterQueryInstructions,
-        queryFilterArguments: widget.controller.filterArgs,
+    unawaited(
+      showDialog(
+        context: context,
+        builder: (context) => FilterDialog<NetworkController, NetworkRequest>(
+          controller: widget.controller,
+          queryInstructions: NetworkScreenBody.filterQueryInstructions,
+          queryFilterArguments: widget.controller.filterArgs,
+        ),
       ),
     );
   }
@@ -338,6 +351,12 @@ class NetworkRequestsTable extends StatelessWidget {
   Widget build(BuildContext context) {
     return OutlineDecoration(
       child: FlatTable<NetworkRequest?>(
+        keyFactory: (NetworkRequest? data) => ValueKey<NetworkRequest?>(data),
+        data: requests,
+        dataKey: 'network-requests',
+        searchMatchesNotifier: searchMatchesNotifier,
+        activeSearchMatchNotifier: activeSearchMatchNotifier,
+        autoScrollContent: true,
         columns: [
           methodColumn,
           addressColumn,
@@ -347,17 +366,9 @@ class NetworkRequestsTable extends StatelessWidget {
           timestampColumn,
           actionsColumn
         ],
-        data: requests,
-        keyFactory: (NetworkRequest? data) => ValueKey<NetworkRequest?>(data),
-        onItemSelected: (item) {
-          networkController.selectRequest(item);
-        },
         selectionNotifier: networkController.selectedRequest,
-        autoScrollContent: true,
-        sortColumn: timestampColumn,
-        sortDirection: SortDirection.ascending,
-        searchMatchesNotifier: searchMatchesNotifier,
-        activeSearchMatchNotifier: activeSearchMatchNotifier,
+        defaultSortColumn: timestampColumn,
+        defaultSortDirection: SortDirection.ascending,
       ),
     );
   }
@@ -434,20 +445,24 @@ class ActionsColumn extends ColumnData<NetworkRequest>
         PopupMenuItem(
           child: const Text('Copy as URL'),
           onTap: () {
-            copyToClipboard(
-              data.uri,
-              'Copied the URL to the clipboard',
-              context,
+            unawaited(
+              copyToClipboard(
+                data.uri,
+                'Copied the URL to the clipboard',
+                context,
+              ),
             );
           },
         ),
         PopupMenuItem(
           child: const Text('Copy as cURL'),
           onTap: () {
-            copyToClipboard(
-              CurlCommand.from(data).toString(),
-              'Copied the cURL command to the clipboard',
-              context,
+            unawaited(
+              copyToClipboard(
+                CurlCommand.from(data).toString(),
+                'Copied the cURL command to the clipboard',
+                context,
+              ),
             );
           },
         )
