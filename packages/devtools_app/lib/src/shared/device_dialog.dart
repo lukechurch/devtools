@@ -14,8 +14,8 @@ import 'connected_app.dart';
 import 'dialogs.dart';
 import 'globals.dart';
 import 'routing.dart';
-import 'table.dart';
-import 'table_data.dart';
+import 'table/table.dart';
+import 'table/table_data.dart';
 import 'theme.dart';
 import 'utils.dart';
 
@@ -38,7 +38,7 @@ class DeviceDialog extends StatelessWidget {
     // TODO(kenz): set actions alignment to `spaceBetween` if
     // https://github.com/flutter/flutter/issues/69708 is fixed.
     return DevToolsDialog(
-      title: dialogTitleText(theme, 'Device Info'),
+      title: const DialogTitleText('Device Info'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -58,7 +58,7 @@ class DeviceDialog extends StatelessWidget {
       actions: [
         _connectToNewAppButton(context),
         if (connectedApp.isRunningOnDartVM!) _ViewVMFlagsButton(),
-        DialogCloseButton(),
+        const DialogCloseButton(),
       ],
     );
   }
@@ -146,12 +146,10 @@ class _VMFlagsDialogState extends State<VMFlagsDialog> with AutoDisposeMixin {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return DevToolsDialog(
       title: Row(
         children: [
-          dialogTitleText(theme, 'VM Flags'),
+          const DialogTitleText('VM Flags'),
           const Expanded(child: SizedBox(width: denseSpacing)),
           Container(
             width: defaultSearchTextWidth,
@@ -178,7 +176,7 @@ class _VMFlagsDialogState extends State<VMFlagsDialog> with AutoDisposeMixin {
           ),
         ],
       ),
-      actions: [
+      actions: const [
         DialogCloseButton(),
       ],
     );
@@ -186,26 +184,25 @@ class _VMFlagsDialogState extends State<VMFlagsDialog> with AutoDisposeMixin {
 }
 
 class _FlagTable extends StatelessWidget {
-  _FlagTable(this.flags);
+  const _FlagTable(this.flags);
 
   final List<_DialogFlag> flags;
 
-  final ColumnData<_DialogFlag> name = _NameColumn();
-  final ColumnData<_DialogFlag> description = _DescriptionColumn();
-  final ColumnData<_DialogFlag> value = _ValueColumn();
-
-  List<ColumnData<_DialogFlag>> get columns => [name, description, value];
+  static final ColumnData<_DialogFlag> name = _NameColumn();
+  static final ColumnData<_DialogFlag> description = _DescriptionColumn();
+  static final ColumnData<_DialogFlag> value = _ValueColumn();
+  static List<ColumnData<_DialogFlag>> columns = [name, description, value];
 
   @override
   Widget build(BuildContext context) {
     return OutlineDecoration(
       child: FlatTable<_DialogFlag>(
-        columns: columns,
-        data: flags,
         keyFactory: (_DialogFlag flag) => ValueKey<String?>(flag.name),
-        sortColumn: name,
-        sortDirection: SortDirection.ascending,
-        onItemSelected: (_) => null,
+        data: flags,
+        dataKey: 'vm-flags',
+        columns: columns,
+        defaultSortColumn: name,
+        defaultSortDirection: SortDirection.ascending,
       ),
     );
   }

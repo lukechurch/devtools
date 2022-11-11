@@ -43,9 +43,7 @@ class NetworkController
 
   final _requests = ValueNotifier<NetworkRequests>(NetworkRequests());
 
-  ValueListenable<NetworkRequest?> get selectedRequest => _selectedRequest;
-
-  final _selectedRequest = ValueNotifier<NetworkRequest?>(null);
+  final selectedRequest = ValueNotifier<NetworkRequest?>(null);
 
   /// Notifies that the timeline is currently being recorded.
   ValueListenable<bool> get recordingNotifier => _recordingNotifier;
@@ -71,10 +69,6 @@ class NetworkController
   @visibleForTesting
   bool get isPolling => _pollingTimer != null;
 
-  void selectRequest(NetworkRequest? selection) {
-    _selectedRequest.value = selection;
-  }
-
   void _processHttpProfileRequests({
     required int timelineMicrosOffset,
     required List<HttpProfileRequest> httpRequests,
@@ -93,14 +87,15 @@ class NetworkController
         if (!request.inProgress) {
           final data =
               outstandingRequestsMap.remove(id) as DartIOHttpRequestData;
-          data.getFullRequestData().then((value) => _updateData());
+
+          unawaited(data.getFullRequestData().then((value) => _updateData()));
         }
         continue;
       } else if (wrapped.inProgress) {
         outstandingRequestsMap.putIfAbsent(id, () => wrapped);
       } else {
         // If the response has completed, send a request for body data.
-        wrapped.getFullRequestData().then((value) => _updateData());
+        unawaited(wrapped.getFullRequestData().then((value) => _updateData()));
       }
       currentValues.add(wrapped);
     }
@@ -124,9 +119,9 @@ class NetworkController
     for (final socket in sockets) {
       final webSocket = WebSocket(socket, timelineMicrosOffset);
       // If we have updated data for the selected web socket, update the value.
-      if (_selectedRequest.value is WebSocket &&
-          (_selectedRequest.value as WebSocket).id == webSocket.id) {
-        _selectedRequest.value = webSocket;
+      if (selectedRequest.value is WebSocket &&
+          (selectedRequest.value as WebSocket).id == webSocket.id) {
+        selectedRequest.value = webSocket;
       }
       currentValues.add(webSocket);
     }
@@ -168,7 +163,7 @@ class NetworkController
         // TODO(kenz): look into improving performance by caching more data.
         // Polling less frequently helps performance.
         const Duration(milliseconds: 2000),
-        (_) => _networkService.refreshNetworkData(),
+        (_) => unawaited(_networkService.refreshNetworkData()),
       );
     } else {
       _pollingTimer?.cancel();
@@ -259,16 +254,15 @@ class NetworkController
   }
 
   void _updateSelection() {
-    final selected = _selectedRequest.value;
+    final selected = selectedRequest.value;
     if (selected != null) {
       final requests = filteredData.value;
       if (!requests.contains(selected)) {
-        _selectedRequest.value = null;
+        selectedRequest.value = null;
       }
     }
   }
 
-  // TODO(kenz): search through previous matches when possible.
   @override
   List<NetworkRequest> matchesForSearch(
     String search, {
@@ -276,15 +270,19 @@ class NetworkController
   }) {
     if (search.isEmpty) return [];
     final matches = <NetworkRequest>[];
-    final caseInsensitiveSearch = search.toLowerCase();
-
-    final currentRequests = filteredData.value;
-    for (final request in currentRequests) {
-      if (request.uri.toLowerCase().contains(caseInsensitiveSearch)) {
-        matches.add(request);
-        // TODO(kenz): use the value request.isSearchMatch in the network
-        // requests table to improve performance. This will require some
-        // refactoring of FlatTable.
+    if (searchPreviousMatches) {
+      final previousMatches = searchMatches.value;
+      for (final previousMatch in previousMatches) {
+        if (previousMatch.uri.caseInsensitiveContains(search)) {
+          matches.add(previousMatch);
+        }
+      }
+    } else {
+      final currentRequests = filteredData.value;
+      for (final request in currentRequests) {
+        if (request.uri.caseInsensitiveContains(search)) {
+          matches.add(request);
+        }
       }
     }
     return matches;

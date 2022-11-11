@@ -93,7 +93,7 @@ class LoggingDetailsController {
       tree = createLoggingTree(
         onSelectionChange: () {
           final InspectorTreeNode node = tree!.selection!;
-          tree!.maybePopulateChildren(node);
+          unawaited(tree!.maybePopulateChildren(node));
 
           // TODO(jacobr): node.diagnostic.isDiagnosticableValue isn't quite
           // right.
@@ -102,7 +102,7 @@ class LoggingDetailsController {
             // TODO(jacobr): warn if the selection can't be set as the node is
             // stale which is likely if this is an old log entry.
             onShowInspector();
-            diagnosticLocal.setSelectionInspector(false);
+            unawaited(diagnosticLocal.setSelectionInspector(false));
           }
         },
       );
@@ -125,13 +125,15 @@ class LoggingDetailsController {
     if (data.needsComputing) {
       onShowDetails(text: '');
 
-      data.compute().then((_) {
-        // If we're still displaying the same log entry, then update the UI with
-        // the calculated value.
-        if (this.data == data) {
-          _updateUIFromData();
-        }
-      });
+      unawaited(
+        data.compute().then((_) {
+          // If we're still displaying the same log entry, then update the UI with
+          // the calculated value.
+          if (this.data == data) {
+            _updateUIFromData();
+          }
+        }),
+      );
     } else {
       _updateUIFromData();
     }
@@ -187,13 +189,7 @@ class LoggingController extends DisposableController
 
   List<LogData> data = <LogData>[];
 
-  final _selectedLog = ValueNotifier<LogData?>(null);
-
-  ValueListenable<LogData?> get selectedLog => _selectedLog;
-
-  void selectLog(LogData data) {
-    _selectedLog.value = data;
-  }
+  final selectedLog = ValueNotifier<LogData?>(null);
 
   void _updateData(List<LogData> logs) {
     data = logs;
@@ -204,11 +200,11 @@ class LoggingController extends DisposableController
   }
 
   void _updateSelection() {
-    final selected = _selectedLog.value;
+    final selected = selectedLog.value;
     if (selected != null) {
       final List<LogData> logs = filteredData.value;
       if (!logs.contains(selected)) {
-        _selectedLog.value = null;
+        selectedLog.value = null;
       }
     }
   }
@@ -629,7 +625,6 @@ class LoggingController extends DisposableController
     );
   }
 
-  // TODO(kenz): search through previous matches when possible.
   @override
   List<LogData> matchesForSearch(
     String search, {
@@ -637,17 +632,22 @@ class LoggingController extends DisposableController
   }) {
     if (search.isEmpty) return [];
     final matches = <LogData>[];
-    final caseInsensitiveSearch = search.toLowerCase();
-
-    final List<LogData> currentLogs = filteredData.value;
-    for (final log in currentLogs) {
-      if ((log.summary != null &&
-              log.summary!.toLowerCase().contains(caseInsensitiveSearch)) ||
-          (log.details != null &&
-              log.details!.toLowerCase().contains(caseInsensitiveSearch))) {
-        matches.add(log);
-        // TODO(kenz): use the value of log.isSearchMatch in the logs table to
-        // improve performance. This will require some refactoring of FlatTable.
+    if (searchPreviousMatches) {
+      final previousMatches = searchMatches.value;
+      for (final previousMatch in previousMatches) {
+        if (previousMatch.summary!.caseInsensitiveContains(search)) {
+          matches.add(previousMatch);
+        }
+      }
+    } else {
+      final List<LogData> currentLogs = filteredData.value;
+      for (final log in currentLogs) {
+        if ((log.summary != null &&
+                log.summary!.caseInsensitiveContains(search)) ||
+            (log.details != null &&
+                log.details!.caseInsensitiveContains(search))) {
+          matches.add(log);
+        }
       }
     }
     return matches;

@@ -4,15 +4,14 @@
 
 import 'dart:convert';
 
-import 'package:devtools_app/src/primitives/trace_event.dart';
-import 'package:devtools_app/src/primitives/utils.dart';
-import 'package:devtools_app/src/screens/performance/performance_model.dart';
-import 'package:devtools_app/src/screens/profiler/cpu_profile_model.dart';
-import 'package:devtools_app/src/service/service_manager.dart';
+import 'package:devtools_app/devtools_app.dart';
+import 'package:devtools_app/src/screens/performance/panes/raster_stats/raster_stats_model.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../test_data/cpu_profile.dart';
 import '../test_data/performance.dart';
+import '../test_data/performance_raster_stats.dart';
+
 import '../test_utils/test_utils.dart';
 
 void main() {
@@ -39,6 +38,7 @@ void main() {
       expect(performanceData.selectedEvent, isNull);
       expect(performanceData.displayRefreshRate, 60.0);
       expect(performanceData.cpuProfileData, isNull);
+      expect(performanceData.rasterStats, isNull);
     });
 
     test('to json', () {
@@ -49,27 +49,26 @@ void main() {
           PerformanceData.flutterFramesKey: [],
           PerformanceData.displayRefreshRateKey: 60,
           PerformanceData.traceEventsKey: [],
-          PerformanceData.cpuProfileKey: {},
           PerformanceData.selectedEventKey: {},
+          PerformanceData.cpuProfileKey: {},
+          PerformanceData.rasterStatsKey: {},
         }),
       );
 
       performanceData = PerformanceData(
+        frames: [testFrame0, testFrame1],
+        displayRefreshRate: 60,
         traceEvents: [
           {'name': 'FakeTraceEvent'}
         ],
-        frames: [testFrame0, testFrame1],
         selectedEvent: vsyncEvent,
         cpuProfileData: CpuProfileData.parse(goldenCpuProfileDataJson),
-        displayRefreshRate: 60,
+        rasterStats: RasterStats.parse(rasterStatsFromDevToolsJson),
       );
       expect(
         performanceData.json,
         equals({
           PerformanceData.selectedFrameIdKey: null,
-          PerformanceData.traceEventsKey: [
-            {'name': 'FakeTraceEvent'}
-          ],
           PerformanceData.flutterFramesKey: [
             {
               'number': 0,
@@ -88,9 +87,13 @@ void main() {
               'vsyncOverhead': 1000
             },
           ],
-          PerformanceData.cpuProfileKey: goldenCpuProfileDataJson,
-          PerformanceData.selectedEventKey: vsyncEvent.json,
           PerformanceData.displayRefreshRateKey: 60,
+          PerformanceData.traceEventsKey: [
+            {'name': 'FakeTraceEvent'}
+          ],
+          PerformanceData.selectedEventKey: vsyncEvent.json,
+          PerformanceData.cpuProfileKey: goldenCpuProfileDataJson,
+          PerformanceData.rasterStatsKey: rasterStatsFromDevToolsJson,
         }),
       );
     });
@@ -111,6 +114,7 @@ void main() {
         selectedEvent: vsyncEvent,
         selectedFrame: testFrame0,
         cpuProfileData: CpuProfileData.parse(jsonDecode(jsonEncode({}))),
+        rasterStats: RasterStats.parse(rasterStatsFromDevToolsJson),
       );
       expect(performanceData.traceEvents, isNotEmpty);
       expect(performanceData.frames, isNotEmpty);
@@ -118,8 +122,9 @@ void main() {
       expect(performanceData.selectedFrameId, 0);
       expect(performanceData.selectedEvent, isNotNull);
       expect(performanceData.displayRefreshRate, equals(120));
-      expect(performanceData.cpuProfileData, isNotNull);
       expect(performanceData.timelineEvents, isNotEmpty);
+      expect(performanceData.cpuProfileData, isNotNull);
+      expect(performanceData.rasterStats, isNotNull);
 
       performanceData.clear();
       expect(performanceData.traceEvents, isEmpty);
@@ -127,8 +132,9 @@ void main() {
       expect(performanceData.selectedFrame, isNull);
       expect(performanceData.selectedFrameId, isNull);
       expect(performanceData.selectedEvent, isNull);
-      expect(performanceData.cpuProfileData, isNull);
       expect(performanceData.timelineEvents, isEmpty);
+      expect(performanceData.cpuProfileData, isNull);
+      expect(performanceData.rasterStats, isNull);
     });
 
     test('initializeEventGroups', () {
@@ -193,6 +199,7 @@ void main() {
       expect(offlineData.selectedEvent, isNull);
       expect(offlineData.displayRefreshRate, equals(60.0));
       expect(offlineData.cpuProfileData, isNull);
+      expect(offlineData.rasterStats, isNull);
 
       offlineData = OfflinePerformanceData.parse(offlinePerformanceDataJson);
       expect(
@@ -220,6 +227,10 @@ void main() {
         offlineData.cpuProfileData!.toJson,
         equals(goldenCpuProfileDataJson),
       );
+      expect(
+        offlineData.rasterStats!.json,
+        equals(rasterStatsFromDevToolsJson),
+      );
     });
 
     test('shallowClone', () {
@@ -233,6 +244,7 @@ void main() {
       expect(offlineData.selectedEvent, equals(clone.selectedEvent));
       expect(offlineData.displayRefreshRate, equals(clone.displayRefreshRate));
       expect(offlineData.cpuProfileData, equals(clone.cpuProfileData));
+      expect(offlineData.rasterStats, equals(clone.rasterStats));
       expect(identical(offlineData, clone), isFalse);
     });
   });
@@ -386,47 +398,6 @@ void main() {
       expect(
         event.time.end!.inMicroseconds,
         asyncEndATrace.event.timestampMicros,
-      );
-    });
-  });
-
-  group('FlutterFrame', () {
-    test('shaderDuration', () {
-      expect(testFrame0.shaderDuration.inMicroseconds, equals(0));
-      expect(testFrame1.shaderDuration.inMicroseconds, equals(0));
-      expect(jankyFrame.shaderDuration.inMicroseconds, equals(0));
-      expect(jankyFrameUiOnly.shaderDuration.inMicroseconds, equals(0));
-      expect(jankyFrameRasterOnly.shaderDuration.inMicroseconds, equals(0));
-      expect(
-        testFrameWithShaderJank.shaderDuration.inMicroseconds,
-        equals(50000),
-      );
-      expect(
-        testFrameWithSubtleShaderJank.shaderDuration.inMicroseconds,
-        equals(4000),
-      );
-    });
-
-    test('hasShaderTime', () {
-      expect(testFrame0.hasShaderTime, isFalse);
-      expect(testFrame1.hasShaderTime, isFalse);
-      expect(jankyFrame.hasShaderTime, isFalse);
-      expect(jankyFrameUiOnly.hasShaderTime, isFalse);
-      expect(jankyFrameRasterOnly.hasShaderTime, isFalse);
-      expect(testFrameWithShaderJank.hasShaderTime, isTrue);
-      expect(testFrameWithSubtleShaderJank.hasShaderTime, isTrue);
-    });
-
-    test('hasShaderJank', () {
-      expect(testFrame0.hasShaderJank(defaultRefreshRate), isFalse);
-      expect(testFrame1.hasShaderJank(defaultRefreshRate), isFalse);
-      expect(jankyFrame.hasShaderJank(defaultRefreshRate), isFalse);
-      expect(jankyFrameUiOnly.hasShaderJank(defaultRefreshRate), isFalse);
-      expect(jankyFrameRasterOnly.hasShaderJank(defaultRefreshRate), isFalse);
-      expect(testFrameWithShaderJank.hasShaderJank(defaultRefreshRate), isTrue);
-      expect(
-        testFrameWithSubtleShaderJank.hasShaderJank(defaultRefreshRate),
-        isFalse,
       );
     });
   });

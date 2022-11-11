@@ -392,22 +392,30 @@ abstract class FlameChartState<T extends FlameChart,
       // TODO(kenz): zoom in/out faster if key is held. It actually zooms slower
       // if the key is held currently.
       if (keyLabel == 'w') {
-        zoomTo(
-          math.min(
-            maxZoomLevel,
-            currentZoom + keyboardZoomInUnit,
+        unawaited(
+          zoomTo(
+            math.min(
+              maxZoomLevel,
+              currentZoom + keyboardZoomInUnit,
+            ),
           ),
         );
       } else if (keyLabel == 's') {
-        zoomTo(
-          math.max(
-            FlameChart.minZoomLevel,
-            currentZoom - keyboardZoomOutUnit,
+        unawaited(
+          zoomTo(
+            math.max(
+              FlameChart.minZoomLevel,
+              currentZoom - keyboardZoomOutUnit,
+            ),
           ),
         );
       } else if (keyLabel == 'a') {
+        // `unawaited` does not work for FutureOr
+        // ignore: discarded_futures
         scrollToX(horizontalControllerGroup.offset - keyboardScrollUnit);
       } else if (keyLabel == 'd') {
+        // `unawaited` does not work for FutureOr
+        // ignore: discarded_futures
         scrollToX(horizontalControllerGroup.offset + keyboardScrollUnit);
       }
     }
@@ -478,6 +486,8 @@ abstract class FlameChartState<T extends FlameChart,
       // to call this that guarantees the scroll controller offsets will be
       // updated for the new zoom level and layout size
       // https://github.com/flutter/devtools/issues/2012.
+      // `unawaited` does not work for FutureOr
+      // ignore: discarded_futures
       scrollToX(newScrollOffset, jump: true);
     });
   }
@@ -561,11 +571,11 @@ abstract class FlameChartState<T extends FlameChart,
     // had time to update their scroll extents. Otherwise, we can hit a race
     // where are trying to scroll to an offset that is beyond what the scroll
     // controller thinks its max scroll extent is.
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await Future.wait([
-        scrollHorizontallyToData(data),
-        if (scrollVertically) scrollVerticallyToData(data),
-      ]);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        unawaited(scrollHorizontallyToData(data));
+        if (scrollVertically) unawaited(scrollVerticallyToData(data));
+      }
     });
   }
 

@@ -5,8 +5,11 @@
 import 'dart:io';
 
 const argDevToolsBuild = 'devtools-build';
+const argUpdatePerfetto = '--update-perfetto';
 
 void main(List<String> args) async {
+  final shouldUpdatePerfetto = args.contains(argUpdatePerfetto);
+
   final mainDevToolsDirectory = Directory.current;
   if (!mainDevToolsDirectory.path.endsWith('/devtools')) {
     throw Exception('Please execute this script from your top level '
@@ -23,16 +26,30 @@ void main(List<String> args) async {
   print('Running the build_release.sh script...');
   final buildProcess = await Process.start(
     './tool/build_release.sh',
-    [],
+    [
+      if (shouldUpdatePerfetto) argUpdatePerfetto,
+    ],
     workingDirectory: mainDevToolsDirectory.path,
   );
   _forwardOutputStreams(buildProcess);
-  await buildProcess.exitCode;
+  final buildProcessExitCode = await buildProcess.exitCode;
+  if (buildProcessExitCode == 1) {
+    throw Exception(
+      'Something went wrong while running `tool/build_release.sh.',
+    );
+  }
 
   final devToolsBuildLocation =
       '${mainDevToolsDirectory.path}/packages/devtools_app/build/web';
 
   print('Completed building DevTools: $devToolsBuildLocation');
+
+  print('Run pub get for DDS in local dart sdk');
+  await Process.start(
+    'dart',
+    ['pub', 'get'],
+    workingDirectory: '$localDartSdkLocation/pkg/dds',
+  );
 
   print('Serving DevTools with a local devtools server...');
   final serveProcess = await Process.start(

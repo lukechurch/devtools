@@ -10,6 +10,8 @@ import 'package:flutter/foundation.dart';
 import 'package:vm_service/vm_service.dart';
 
 import '../primitives/utils.dart';
+import '../screens/vm_developer/vm_service_private_extensions.dart';
+import '../shared/globals.dart';
 import 'json_to_service_cache.dart';
 
 class VmServiceWrapper implements VmService {
@@ -18,7 +20,7 @@ class VmServiceWrapper implements VmService {
     this._connectedUri, {
     this.trackFutures = false,
   }) {
-    _initSupportedProtocols();
+    unawaited(_initSupportedProtocols());
   }
 
   VmServiceWrapper.fromNewVmService(
@@ -35,7 +37,7 @@ class VmServiceWrapper implements VmService {
       log: log,
       disposeHandler: disposeHandler,
     );
-    _initSupportedProtocols();
+    unawaited(_initSupportedProtocols());
   }
 
   // TODO(https://github.com/dart-lang/sdk/issues/49072): in the long term, do
@@ -244,11 +246,19 @@ class VmServiceWrapper implements VmService {
   ) async {
     return trackFuture(
       'getCpuSamples',
-      _vmService.getCpuSamples(
-        isolateId,
-        timeOriginMicros,
-        timeExtentMicros,
-      ),
+      _vmService.callMethod(
+        'getCpuSamples',
+        isolateId: isolateId,
+        args: {
+          'timeOriginMicros': timeOriginMicros,
+          'timeExtentMicros': timeExtentMicros,
+          // Requests the code profile in addition to the function profile when
+          // running with VM developer mode enabled. This data isn't accessible
+          // in non-VM developer mode, so not requesting the code profile will
+          // save on space and network usage.
+          '_code': preferences.vmDeveloperModeEnabled.value,
+        },
+      ).then((e) => e as CpuSamples),
     );
   }
 
@@ -960,24 +970,8 @@ class VmServiceWrapper implements VmService {
     return future;
   }
 
-  /// Prevent DevTools from blocking Dart SDK rolls if changes in
-  /// package:vm_service are unimplemented in DevTools.
-  @override
-  dynamic noSuchMethod(Invocation invocation) {
-    return super.noSuchMethod(invocation);
-  }
-}
-
-class TrackedFuture<T> {
-  TrackedFuture(this.name, this.future);
-
-  final String name;
-  final Future<T> future;
-}
-
-/// Adds support for private VM RPCs that can only be used when VM developer
-/// mode is enabled. Not for use outside of VM developer pages.
-extension VmServicePrivate on VmServiceWrapper {
+  /// Adds support for private VM RPCs that can only be used when VM developer
+  /// mode is enabled. Not for use outside of VM developer pages.
   /// Allows callers to invoke extension methods for private RPCs. This should
   /// only be set by [PreferencesController.toggleVmDeveloperMode] or tests.
   static bool enablePrivateRpcs = false;
@@ -1008,12 +1002,6 @@ extension VmServicePrivate on VmServiceWrapper {
         parser: Success.parse,
       );
 
-  Future<PortList?> getPorts(String isolateId) => _privateRpcInvoke(
-        'getPorts',
-        isolateId: isolateId,
-        parser: PortList.parse,
-      );
-
   Future<InstanceRef?> getReachableSize(String isolateId, String targetId) =>
       _privateRpcInvoke(
         'getReachableSize',
@@ -1033,4 +1021,24 @@ extension VmServicePrivate on VmServiceWrapper {
         },
         parser: InstanceRef.parse,
       );
+
+  Future<ObjectStore?> getObjectStore(String isolateId) => _privateRpcInvoke(
+        'getObjectStore',
+        isolateId: isolateId,
+        parser: ObjectStore.parse,
+      );
+
+  /// Prevent DevTools from blocking Dart SDK rolls if changes in
+  /// package:vm_service are unimplemented in DevTools.
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    return super.noSuchMethod(invocation);
+  }
+}
+
+class TrackedFuture<T> {
+  TrackedFuture(this.name, this.future);
+
+  final String name;
+  final Future<T> future;
 }

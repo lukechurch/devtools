@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:async';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
@@ -152,139 +153,140 @@ class _CpuProfilerState extends State<CpuProfiler>
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
     final colorScheme = theme.colorScheme;
-    final currentTab =
-        widget.tabs.isNotEmpty ? widget.tabs[_tabController.index] : null;
-    final hasData =
-        data != CpuProfilerController.baseStateCpuProfileData && !data.isEmpty;
-
+    if (widget.tabs.isEmpty) {
+      return Container();
+    }
+    final currentTab = widget.tabs[_tabController.index];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        SizedBox(
-          height: defaultButtonHeight,
-          child: Row(
-            children: [
-              TabBar(
-                labelColor:
-                    textTheme.bodyText1?.color ?? colorScheme.defaultForeground,
-                isScrollable: true,
-                controller: _tabController,
-                tabs: widget.tabs,
-              ),
-              const Spacer(),
-              if (hasData) ...[
-                if (currentTab!.key != CpuProfiler.summaryTab) ...[
-                  FilterButton(
-                    onPressed: _showFilterDialog,
-                    isFilterActive: widget.controller.isToggleFilterActive,
-                  ),
-                  const SizedBox(width: denseSpacing),
-                  UserTagDropdown(widget.controller),
-                  const SizedBox(width: denseSpacing),
-                ],
-                // TODO(kenz): support search for call tree and bottom up tabs as
-                // well. This will require implementing search for tree tables.
-                if (currentTab.key == CpuProfiler.flameChartTab)
-                  Row(
-                    children: [
-                      if (widget.searchFieldKey != null)
-                        _buildSearchField(hasData),
-                      FlameChartHelpButton(
-                        gaScreen: widget.standaloneProfiler
-                            ? analytics_constants.cpuProfiler
-                            : analytics_constants.performance,
-                        gaSelection:
-                            analytics_constants.cpuProfileFlameChartHelp,
-                        additionalInfo: [
-                          ...dialogSubHeader(Theme.of(context), 'Legend'),
-                          Legend(
-                            entries: [
-                              LegendEntry(
-                                'App code (code from your app and imported packages)',
-                                appCodeColor.background.colorFor(colorScheme),
-                              ),
-                              LegendEntry(
-                                'Native code (code from the native runtime - Android, iOS, etc.)',
-                                nativeCodeColor.background
-                                    .colorFor(colorScheme),
-                              ),
-                              LegendEntry(
-                                'Dart core libraries (code from the Dart SDK)',
-                                dartCoreColor.background.colorFor(colorScheme),
-                              ),
-                              LegendEntry(
-                                'Flutter Framework (code from the Flutter SDK)',
-                                flutterCoreColor.background
-                                    .colorFor(colorScheme),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                if (currentTab.key != CpuProfiler.flameChartTab &&
-                    currentTab.key != CpuProfiler.summaryTab)
-                  Row(
-                    children: [
-                      // TODO(kenz): add a switch to order samples by user tag here
-                      // instead of using the filter control. This will allow users
-                      // to see all the tags side by side in the tree tables.
-                      ExpandAllButton(
-                        onPressed: () {
-                          _performOnDataRoots(
-                            (root) => root.expandCascading(),
-                            currentTab,
-                          );
-                        },
-                      ),
-                      const SizedBox(width: denseSpacing),
-                      CollapseAllButton(
-                        onPressed: () {
-                          _performOnDataRoots(
-                            (root) => root.collapseCascading(),
-                            currentTab,
-                          );
-                        },
-                      ),
-                      // The standaloneProfiler does not need padding because it is
-                      // not wrapped in a bordered container.
-                      if (!widget.standaloneProfiler)
-                        const SizedBox(width: denseSpacing),
-                    ],
-                  ),
-              ],
-            ],
-          ),
-        ),
-        Expanded(
-          child: TabBarView(
-            physics: defaultTabBarViewPhysics,
+        AreaPaneHeader(
+          needsTopBorder: false,
+          leftPadding: 0,
+          tall: true,
+          title: TabBar(
+            labelColor:
+                textTheme.bodyLarge?.color ?? colorScheme.defaultForeground,
+            isScrollable: true,
             controller: _tabController,
-            children: _buildProfilerViews(),
+            tabs: widget.tabs,
           ),
+          actions: [
+            if (currentTab.key != CpuProfiler.summaryTab) ...[
+              FilterButton(
+                onPressed: _showFilterDialog,
+                isFilterActive: widget.controller.isToggleFilterActive,
+              ),
+              const SizedBox(width: denseSpacing),
+              UserTagDropdown(widget.controller),
+              const SizedBox(width: denseSpacing),
+              ValueListenableBuilder<bool>(
+                valueListenable: preferences.vmDeveloperModeEnabled,
+                builder: (context, vmDeveloperModeEnabled, _) {
+                  if (!vmDeveloperModeEnabled) {
+                    return const SizedBox();
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.only(right: denseSpacing),
+                    child: ModeDropdown(widget.controller),
+                  );
+                },
+              ),
+            ],
+            // TODO(kenz): support search for call tree and bottom up tabs as
+            // well. This will require implementing search for tree tables.
+            if (currentTab.key == CpuProfiler.flameChartTab) ...[
+              if (widget.searchFieldKey != null) _buildSearchField(),
+              FlameChartHelpButton(
+                gaScreen: widget.standaloneProfiler
+                    ? analytics_constants.cpuProfiler
+                    : analytics_constants.performance,
+                gaSelection: analytics_constants.cpuProfileFlameChartHelp,
+                additionalInfo: [
+                  ...dialogSubHeader(Theme.of(context), 'Legend'),
+                  Legend(
+                    entries: [
+                      LegendEntry(
+                        'App code (code from your app and imported packages)',
+                        appCodeColor.background.colorFor(colorScheme),
+                      ),
+                      LegendEntry(
+                        'Native code (code from the native runtime - Android, iOS, etc.)',
+                        nativeCodeColor.background.colorFor(colorScheme),
+                      ),
+                      LegendEntry(
+                        'Dart core libraries (code from the Dart SDK)',
+                        dartCoreColor.background.colorFor(colorScheme),
+                      ),
+                      LegendEntry(
+                        'Flutter Framework (code from the Flutter SDK)',
+                        flutterCoreColor.background.colorFor(colorScheme),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+            if (currentTab.key != CpuProfiler.flameChartTab &&
+                currentTab.key != CpuProfiler.summaryTab) ...[
+              // TODO(kenz): add a switch to order samples by user tag here
+              // instead of using the filter control. This will allow users
+              // to see all the tags side by side in the tree tables.
+              ExpandAllButton(
+                onPressed: () {
+                  _performOnDataRoots(
+                    (root) => root.expandCascading(),
+                    currentTab,
+                  );
+                },
+              ),
+              const SizedBox(width: denseSpacing),
+              CollapseAllButton(
+                onPressed: () {
+                  _performOnDataRoots(
+                    (root) => root.collapseCascading(),
+                    currentTab,
+                  );
+                },
+              ),
+            ],
+          ],
+        ),
+        ValueListenableBuilder<CpuProfilerViewType>(
+          valueListenable: widget.controller.viewType,
+          builder: (context, viewType, _) {
+            return Expanded(
+              child: TabBarView(
+                physics: defaultTabBarViewPhysics,
+                controller: _tabController,
+                children: _buildProfilerViews(),
+              ),
+            );
+          },
         ),
       ],
     );
   }
 
   void _showFilterDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => CpuProfileFilterDialog(
-        controller: widget.controller,
+    unawaited(
+      showDialog(
+        context: context,
+        builder: (context) => CpuProfileFilterDialog(
+          controller: widget.controller,
+        ),
       ),
     );
   }
 
-  Widget _buildSearchField(bool hasData) {
+  Widget _buildSearchField() {
     return Container(
       width: wideSearchTextWidth,
       height: defaultTextFieldHeight,
       child: buildSearchField(
         controller: widget.controller,
         searchFieldKey: widget.searchFieldKey!,
-        searchFieldEnabled: hasData,
+        searchFieldEnabled: true,
         shouldRequestFocus: false,
         supportsNavigation: true,
       ),
@@ -415,33 +417,52 @@ class UserTagDropdown extends StatelessWidget {
         final tooltip = userTags.isNotEmpty
             ? 'Filter the CPU profile by the given UserTag'
             : 'No UserTags found for this CPU profile';
-        return DevToolsTooltip(
-          message: tooltip,
-          child: RoundedDropDownButton<String>(
-            isDense: true,
-            style: Theme.of(context).textTheme.bodyText2,
-            value: userTag,
-            items: [
-              _buildMenuItem(
-                display: '$filterByTag ${CpuProfilerController.userTagNone}',
-                value: CpuProfilerController.userTagNone,
-              ),
-              // We don't want to show the 'Default' tag if it is the only
-              // tag available. The 'none' tag above is equivalent in this
-              // case.
-              if (!(userTags.length == 1 &&
-                  userTags.first == UserTag.defaultTag.label))
-                for (final tag in userTags)
-                  _buildMenuItem(
-                    display: '$filterByTag $tag',
-                    value: tag,
-                  ),
-            ],
-            onChanged: userTags.isEmpty ||
-                    (userTags.length == 1 &&
-                        userTags.first == UserTag.defaultTag.label)
-                ? null
-                : (String? tag) => _onUserTagChanged(tag!, context),
+        return SizedBox(
+          height: defaultButtonHeight,
+          child: DevToolsTooltip(
+            message: tooltip,
+            child: ValueListenableBuilder<bool>(
+              valueListenable: preferences.vmDeveloperModeEnabled,
+              builder: (context, vmDeveloperModeEnabled, _) {
+                return RoundedDropDownButton<String>(
+                  isDense: true,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  value: userTag,
+                  items: [
+                    _buildMenuItem(
+                      display:
+                          '$filterByTag ${CpuProfilerController.userTagNone}',
+                      value: CpuProfilerController.userTagNone,
+                    ),
+                    // We don't want to show the 'Default' tag if it is the only
+                    // tag available. The 'none' tag above is equivalent in this
+                    // case.
+                    if (!(userTags.length == 1 &&
+                        userTags.first == UserTag.defaultTag.label)) ...[
+                      for (final tag in userTags)
+                        _buildMenuItem(
+                          display: '$filterByTag $tag',
+                          value: tag,
+                        ),
+                      _buildMenuItem(
+                        display: 'Group by: User Tag',
+                        value: CpuProfilerController.groupByUserTag,
+                      ),
+                    ],
+                    if (vmDeveloperModeEnabled)
+                      _buildMenuItem(
+                        display: 'Group by: VM Tag',
+                        value: CpuProfilerController.groupByVmTag,
+                      )
+                  ],
+                  onChanged: userTags.isEmpty ||
+                          (userTags.length == 1 &&
+                              userTags.first == UserTag.defaultTag.label)
+                      ? null
+                      : (String? tag) => _onUserTagChanged(tag!, context),
+                );
+              },
+            ),
           ),
         );
       },
@@ -464,5 +485,61 @@ class UserTagDropdown extends StatelessWidget {
     } catch (e) {
       notificationService.push(e.toString());
     }
+  }
+}
+
+/// DropdownButton that controls the value of
+/// [ProfilerScreenController.viewType].
+class ModeDropdown extends StatelessWidget {
+  const ModeDropdown(this.controller);
+
+  final CpuProfilerController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    const mode = 'View:';
+    return ValueListenableBuilder<CpuProfilerViewType>(
+      valueListenable: controller.viewType,
+      builder: (context, viewType, _) {
+        final tooltip = viewType == CpuProfilerViewType.function
+            ? 'Display the profile in terms of the Dart call stack '
+                '(i.e., inlined frames are expanded)'
+            : 'Display the profile in terms of native stack frames '
+                '(i.e., inlined frames are not expanded, display code objects '
+                'rather than individual functions)';
+        return SizedBox(
+          height: defaultButtonHeight,
+          child: DevToolsTooltip(
+            message: tooltip,
+            child: RoundedDropDownButton<CpuProfilerViewType>(
+              isDense: true,
+              style: Theme.of(context).textTheme.bodyMedium,
+              value: viewType,
+              items: [
+                _buildMenuItem(
+                  display: '$mode ${CpuProfilerViewType.function}',
+                  value: CpuProfilerViewType.function,
+                ),
+                _buildMenuItem(
+                  display: '$mode ${CpuProfilerViewType.code}',
+                  value: CpuProfilerViewType.code,
+                ),
+              ],
+              onChanged: (type) => controller.updateView(type!),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  DropdownMenuItem<CpuProfilerViewType> _buildMenuItem({
+    required String display,
+    required CpuProfilerViewType value,
+  }) {
+    return DropdownMenuItem<CpuProfilerViewType>(
+      value: value,
+      child: Text(display),
+    );
   }
 }

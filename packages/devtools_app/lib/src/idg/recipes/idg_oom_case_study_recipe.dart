@@ -3,8 +3,9 @@ import 'dart:async';
 import 'package:http/http.dart' as http;
 
 import '../../../devtools_app.dart' as devtools_app;
+import '../../screens/memory/memory_snapshot_models.dart';
 import '../../shared/globals.dart';
-import '../../shared/table.dart';
+import '../../shared/table/table.dart';
 import '../idg_controller.dart';
 import '../idg_core.dart' as idg_core;
 
@@ -34,7 +35,7 @@ var _s1 = idg_core.Step(
       Click on the leaky Image Viewer app (the image) and drag down for a few
       images to load.''',
   imageUrl:
-      '/Users/lukechurch/GitRepos/devtools/case_study/memory_leaks/images_1_null_safe/readme_images/ImageScroll.gif',
+      '/Users/lukechurch/GitRepos/devtools/case_study/memory_leaks/images_1/readme_images/ImageScroll.gif',
   imageMaxHeight: 300,
   nextStepGuard: idg_core.MaskUntil(
     () => _s0.isDone,
@@ -49,7 +50,7 @@ var _s2 = idg_core.Step(
       Press the Snapshot button to collect information about all objects in the
       Dart VM Heap''',
   imageUrl:
-      '/Users/lukechurch/GitRepos/devtools/case_study/memory_leaks/images_1_null_safe/readme_images/table_first.png',
+      '/Users/lukechurch/GitRepos/devtools/case_study/memory_leaks/images_1/readme_images/table_first.png',
   nextStepGuard: idg_core.MaskUntil(
     () => _s1.isDone,
     idg_core.PresenceSensor('mem-snapshot', 'snapshot taken'),
@@ -85,7 +86,7 @@ var _s3 = idg_core.Step(
               > _Image
                   > Buckets''',
   imageUrl:
-      '/Users/lukechurch/GitRepos/devtools/case_study/memory_leaks/images_1_null_safe/readme_images/analysis_1.png',
+      '/Users/lukechurch/GitRepos/devtools/case_study/memory_leaks/images_1/readme_images/analysis_1.png',
   nextStepGuard: idg_core.MaskUntil(
     () => _s2.isDone,
     idg_core.PresenceSensor('img-buckets-expanded', 'Externals expanded'),
@@ -110,7 +111,8 @@ var _s3 = idg_core.Step(
 
       // Select the _Image node
       imageNode.select();
-      memoryScreenController.selectionSnapshotNotifier.value = Selection(
+      memoryScreenController.selectionSnapshotNotifier.value =
+          Selection<Reference?>(
         node: imageNode,
         nodeIndex: imageNode.index,
         scrollIntoView: true,
@@ -196,7 +198,7 @@ var _s5 = idg_core.Step(
       
       Eventually, this app will run out of memory and crash.''',
   imageUrl:
-      '/Users/lukechurch/GitRepos/devtools/case_study/memory_leaks/images_1_null_safe/readme_images/chart_before_crash.png',
+      '/Users/lukechurch/GitRepos/devtools/case_study/memory_leaks/images_1/readme_images/chart_before_crash.png',
   nextStepGuard: idg_core.MaskUntil(
     () => _s4.isDone,
     idg_core.PresenceSensor('image-loaded', 'a few images have loaded'),
@@ -324,7 +326,7 @@ var _s9 = idg_core.Step(
     idg_core.FileChangeSensor(
       'vscode'.toLowerCase(),
       'File path changed',
-      '/Users/lukechurch/GitRepos/devtools/case_study/memory_leaks/images_1_null_safe/lib/main.dart',
+      '/Users/lukechurch/GitRepos/devtools/case_study/memory_leaks/images_1/lib/main.dart',
     ),
   ),
   buttons: [
@@ -332,7 +334,7 @@ var _s9 = idg_core.Step(
       print('open file');
       await http.get(
         Uri.parse(
-          'http://localhost:9991/?open=/Users/lukechurch/GitRepos/devtools/case_study/memory_leaks/images_1_null_safe/lib/main.dart',
+          'http://localhost:9991/?open=/Users/lukechurch/GitRepos/devtools/case_study/memory_leaks/images_1/lib/main.dart',
         ),
       );
     })

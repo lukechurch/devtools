@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:vm_service/vm_service.dart' hide Stack;
@@ -26,12 +28,10 @@ double get _selectedNodeTopSpacing => _programExplorerRowHeight * 3;
 
 class _ProgramExplorerRow extends StatelessWidget {
   const _ProgramExplorerRow({
-    required this.controller,
     required this.node,
     this.onTap,
   });
 
-  final ProgramExplorerController controller;
   final VMServiceObjectNode node;
   final VoidCallback? onTap;
 
@@ -349,10 +349,9 @@ class _FileExplorerState extends State<_FileExplorer> with AutoDisposeMixin {
       includeScrollbar: true,
       dataDisplayProvider: (node, onTap) {
         return _ProgramExplorerRow(
-          controller: widget.controller,
           node: node,
           onTap: () {
-            widget.controller.selectNode(node);
+            unawaited(widget.controller.selectNode(node));
             onTap();
           },
         );
@@ -369,10 +368,12 @@ class _FileExplorerState extends State<_FileExplorer> with AutoDisposeMixin {
       _scrollController.offset + _scrollController.position.extentInside,
     );
     if (!extentVisible.contains(selectedNodeOffset)) {
-      _scrollController.animateTo(
-        selectedNodeOffset - _selectedNodeTopSpacing,
-        duration: longDuration,
-        curve: defaultCurve,
+      unawaited(
+        _scrollController.animateTo(
+          selectedNodeOffset - _selectedNodeTopSpacing,
+          duration: longDuration,
+          curve: defaultCurve,
+        ),
       );
     }
   }
@@ -404,7 +405,6 @@ class _ProgramOutlineView extends StatelessWidget {
           onItemExpanded: onItemExpanded,
           dataDisplayProvider: (node, onTap) {
             return _ProgramExplorerRow(
-              controller: controller,
               node: node,
               onTap: () async {
                 await node.populateLocation();
@@ -431,12 +431,14 @@ class ProgramExplorer extends StatelessWidget {
     this.title = 'File Explorer',
     this.onNodeSelected,
     this.displayCodeNodes = false,
+    this.displayHeader = true,
   });
 
   final ProgramExplorerController controller;
   final String title;
   final void Function(VMServiceObjectNode)? onNodeSelected;
   final bool displayCodeNodes;
+  final bool displayHeader;
 
   @override
   Widget build(BuildContext context) {
@@ -447,10 +449,12 @@ class ProgramExplorer extends StatelessWidget {
         if (!initialized) {
           body = const CenteredCircularProgressIndicator();
         } else {
-          final fileExplorerHeader = AreaPaneHeader(
-            title: Text(title),
-            needsTopBorder: false,
-          );
+          final fileExplorerHeader = displayHeader
+              ? AreaPaneHeader(
+                  title: Text(title),
+                  needsTopBorder: false,
+                )
+              : BlankHeader();
           final fileExplorer = _FileExplorer(
             controller: controller,
             onItemExpanded: onItemExpanded,
@@ -479,7 +483,7 @@ class ProgramExplorer extends StatelessWidget {
                       initialFractions: const [0.7, 0.3],
                       minSizes: const [0.0, 0.0],
                       headers: <PreferredSizeWidget>[
-                        fileExplorerHeader,
+                        fileExplorerHeader as PreferredSizeWidget,
                         const AreaPaneHeader(title: Text('Outline')),
                       ],
                       children: [
@@ -494,9 +498,7 @@ class ProgramExplorer extends StatelessWidget {
             },
           );
         }
-        return OutlineDecoration(
-          child: body,
-        );
+        return body;
       },
     );
   }

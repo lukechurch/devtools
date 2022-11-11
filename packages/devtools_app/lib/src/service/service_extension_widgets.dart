@@ -163,12 +163,14 @@ class _ServiceExtensionButtonGroupState
 
         final wasSelected = extensionState.isSelected;
 
-        serviceManager.serviceExtensionManager.setServiceExtensionState(
-          extensionState.description.extension,
-          enabled: !wasSelected,
-          value: wasSelected
-              ? extensionState.description.disabledValue
-              : extensionState.description.enabledValue,
+        unawaited(
+          serviceManager.serviceExtensionManager.setServiceExtensionState(
+            extensionState.description.extension,
+            enabled: !wasSelected,
+            value: wasSelected
+                ? extensionState.description.disabledValue
+                : extensionState.description.enabledValue,
+          ),
         );
       });
     } else {
@@ -190,7 +192,11 @@ class HotReloadButton extends StatelessWidget {
       child: _RegisteredServiceExtensionButton._(
         serviceDescription: hotReload,
         action: () {
+          // The future is returned.
+          // ignore: discarded_futures
           return serviceManager.runDeviceBusyTask(
+            // The future is returned.
+            // ignore: discarded_futures
             _wrapReloadCall('reload', serviceManager.performHotReload),
           );
         },
@@ -212,7 +218,11 @@ class HotRestartButton extends StatelessWidget {
       child: _RegisteredServiceExtensionButton._(
         serviceDescription: hotRestart,
         action: () {
+          // The future is returned.
+          // ignore: discarded_futures
           return serviceManager.runDeviceBusyTask(
+            // The future is returned.
+            // ignore: discarded_futures
             _wrapReloadCall('restart', serviceManager.performHotRestart),
           );
         },
@@ -292,14 +302,16 @@ class _RegisteredServiceExtensionButtonState
     if (_hidden) return const SizedBox();
 
     return InkWell(
-      onTap: () => invokeAndCatchErrors(() async {
-        final gaScreenName = widget.serviceDescription.gaScreenName;
-        final gaItem = widget.serviceDescription.gaItem;
-        if (gaScreenName != null && gaItem != null) {
-          ga.select(gaScreenName, gaItem);
-        }
-        await widget.action();
-      }),
+      onTap: () => unawaited(
+        invokeAndCatchErrors(() async {
+          final gaScreenName = widget.serviceDescription.gaScreenName;
+          final gaItem = widget.serviceDescription.gaItem;
+          if (gaScreenName != null && gaItem != null) {
+            ga.select(gaScreenName, gaItem);
+          }
+          await widget.action();
+        }),
+      ),
       child: Container(
         constraints: BoxConstraints.tightFor(
           width: actionWidgetSize,
@@ -400,14 +412,17 @@ class _ServiceExtensionToggleState extends State<_ServiceExtensionToggle>
       value = !value;
     });
 
-    invokeAndCatchErrors(() async {
-      await serviceManager.serviceExtensionManager.setServiceExtensionState(
-        widget.service.extension,
-        enabled: value,
-        value:
-            value ? widget.service.enabledValue : widget.service.disabledValue,
-      );
-    });
+    unawaited(
+      invokeAndCatchErrors(() async {
+        await serviceManager.serviceExtensionManager.setServiceExtensionState(
+          widget.service.extension,
+          enabled: value,
+          value: value
+              ? widget.service.enabledValue
+              : widget.service.disabledValue,
+        );
+      }),
+    );
   }
 }
 
@@ -461,19 +476,21 @@ class _ServiceExtensionCheckboxState extends State<ServiceExtensionCheckbox>
       _setValueFromState(state.value);
     }
 
-    serviceManager.serviceExtensionManager
-        .waitForServiceExtensionAvailable(widget.serviceExtension.extension)
-        .then((isServiceAvailable) {
-      if (isServiceAvailable) {
-        extensionAvailable.value = true;
-        final state = serviceManager.serviceExtensionManager
-            .getServiceExtensionState(widget.serviceExtension.extension);
-        _setValueFromState(state.value);
-        addAutoDisposeListener(state, () {
+    unawaited(
+      serviceManager.serviceExtensionManager
+          .waitForServiceExtensionAvailable(widget.serviceExtension.extension)
+          .then((isServiceAvailable) {
+        if (isServiceAvailable) {
+          extensionAvailable.value = true;
+          final state = serviceManager.serviceExtensionManager
+              .getServiceExtensionState(widget.serviceExtension.extension);
           _setValueFromState(state.value);
-        });
-      }
-    });
+          addAutoDisposeListener(state, () {
+            _setValueFromState(state.value);
+          });
+        }
+      }),
+    );
   }
 
   void _setValueFromState(ServiceExtensionState state) {
@@ -516,17 +533,19 @@ class _ServiceExtensionCheckboxState extends State<ServiceExtensionCheckbox>
   }
 
   void _onChanged(bool? value) {
-    invokeAndCatchErrors(() async {
-      var enabled = value == true;
-      if (widget.serviceExtension.inverted) enabled = !enabled;
-      await serviceManager.serviceExtensionManager.setServiceExtensionState(
-        widget.serviceExtension.extension,
-        enabled: enabled,
-        value: enabled
-            ? widget.serviceExtension.enabledValue
-            : widget.serviceExtension.disabledValue,
-      );
-    });
+    unawaited(
+      invokeAndCatchErrors(() async {
+        var enabled = value == true;
+        if (widget.serviceExtension.inverted) enabled = !enabled;
+        await serviceManager.serviceExtensionManager.setServiceExtensionState(
+          widget.serviceExtension.extension,
+          enabled: enabled,
+          value: enabled
+              ? widget.serviceExtension.enabledValue
+              : widget.serviceExtension.disabledValue,
+        );
+      }),
+    );
   }
 }
 
@@ -671,7 +690,7 @@ class _ServiceExtensionCheckboxGroupButtonState
   void _insertOverlay(BuildContext context) {
     final offset = _calculateOverlayPosition(widget.overlayWidth, context);
     _overlay?.remove();
-    Overlay.of(context)!.insert(
+    Overlay.of(context).insert(
       _overlay = OverlayEntry(
         maintainState: true,
         builder: (context) {
@@ -704,7 +723,7 @@ class _ServiceExtensionCheckboxGroupButtonState
 
   Offset _calculateOverlayPosition(double width, BuildContext context) {
     final overlayBox =
-        Overlay.of(context)!.context.findRenderObject() as RenderBox;
+        Overlay.of(context).context.findRenderObject() as RenderBox;
     final box = context.findRenderObject() as RenderBox;
 
     final maxX = overlayBox.size.width - width;
@@ -922,41 +941,39 @@ class ServiceExtensionRichTooltip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return HoverCardTooltip(
+    return HoverCardTooltip.sync(
       enabled: () => true,
-      onHover: (_) => _buildCardData(context),
+      generateHoverCardData: (_) => _buildCardData(context),
       child: child,
     );
   }
 
-  Future<HoverCardData> _buildCardData(BuildContext context) {
+  HoverCardData _buildCardData(BuildContext context) {
     final textColor = Theme.of(context).colorScheme.toggleButtonsTitle;
 
-    return Future.value(
-      HoverCardData(
-        position: HoverCardPosition.element,
-        width: _tooltipWidth,
-        contents: Material(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                description.tooltip,
-                style: TextStyle(color: textColor),
-              ),
-              if (description.documentationUrl != null &&
-                  description.gaScreenName != null)
-                Align(
-                  alignment: Alignment.bottomRight,
-                  child: MoreInfoLink(
-                    url: description.documentationUrl!,
-                    gaScreenName: description.gaScreenName!,
-                    gaSelectedItemDescription: description.gaItemTooltipLink,
-                  ),
+    return HoverCardData(
+      position: HoverCardPosition.element,
+      width: _tooltipWidth,
+      contents: Material(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              description.tooltip,
+              style: TextStyle(color: textColor),
+            ),
+            if (description.documentationUrl != null &&
+                description.gaScreenName != null)
+              Align(
+                alignment: Alignment.bottomRight,
+                child: MoreInfoLink(
+                  url: description.documentationUrl!,
+                  gaScreenName: description.gaScreenName!,
+                  gaSelectedItemDescription: description.gaItemTooltipLink,
                 ),
-            ],
-          ),
+              ),
+          ],
         ),
       ),
     );

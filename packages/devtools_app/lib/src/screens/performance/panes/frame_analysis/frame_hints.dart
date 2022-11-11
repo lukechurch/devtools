@@ -12,7 +12,6 @@ import '../../../../service/service_extensions.dart' as extensions;
 import '../../../../shared/common_widgets.dart';
 import '../../../../shared/theme.dart';
 import '../../performance_controller.dart';
-import '../../performance_model.dart';
 import '../../performance_utils.dart';
 import '../controls/enhance_tracing/enhance_tracing.dart';
 import '../controls/enhance_tracing/enhance_tracing_controller.dart';
@@ -34,7 +33,8 @@ class FrameHints extends StatelessWidget {
   Widget build(BuildContext context) {
     final performanceController = Provider.of<PerformanceController>(context);
     final frame = frameAnalysis.frame;
-    final displayRefreshRate = performanceController.displayRefreshRate.value;
+    final displayRefreshRate =
+        performanceController.flutterFramesController.displayRefreshRate.value;
     final showUiJankHints = frame.isUiJanky(displayRefreshRate);
     final showRasterJankHints = frame.isRasterJanky(displayRefreshRate);
     if (!(showUiJankHints || showRasterJankHints)) {
@@ -67,7 +67,7 @@ class FrameHints extends StatelessWidget {
             if (frame.hasShaderTime)
               ShaderCompilationHint(shaderTime: frame.shaderDuration),
             const SizedBox(height: denseSpacing),
-            const RasterMetricsHint(),
+            const RasterStatsHint(),
           ]
         : [];
 
@@ -362,8 +362,8 @@ class ShaderCompilationHint extends StatelessWidget {
 }
 
 @visibleForTesting
-class RasterMetricsHint extends StatelessWidget {
-  const RasterMetricsHint({Key? key}) : super(key: key);
+class RasterStatsHint extends StatelessWidget {
+  const RasterStatsHint({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -377,7 +377,7 @@ class RasterMetricsHint extends StatelessWidget {
               style: theme.regularTextStyle,
             ),
             TextSpan(
-              text: ' Raster Metrics ',
+              text: ' Raster Stats ',
               style: theme.subtleFixedFontStyle,
             ),
             TextSpan(

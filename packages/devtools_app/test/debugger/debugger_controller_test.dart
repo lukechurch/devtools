@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:devtools_app/src/screens/debugger/codeview_controller.dart';
 import 'package:devtools_app/src/screens/debugger/debugger_controller.dart';
 import 'package:devtools_app/src/service/service_manager.dart';
 import 'package:devtools_app/src/shared/globals.dart';
@@ -209,16 +210,16 @@ void main() {
   });
 
   group('search', () {
-    late DebuggerController debuggerController;
+    late CodeViewController debuggerController;
 
     setUp(() {
-      debuggerController = TestDebuggerController(
-        initialSwitchToIsolate: false,
-      );
+      debuggerController = TestCodeViewController();
       debuggerController.parsedScript.value = ParsedScript(
         script: testScript,
         highlighter: mockSyntaxHighlighter,
-        executableLines: {},
+        executableLines: const {},
+        coverageHitLines: const {},
+        coverageMissedLines: const {},
       );
     });
 
