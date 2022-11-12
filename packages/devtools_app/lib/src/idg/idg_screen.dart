@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -169,20 +170,34 @@ class _IDGScreenBodyState extends State<IDGScreenBody>
     return StreamBuilder<bool>(
       stream: idgController.onEngineUpdated as Stream<bool>,
       builder: (context, snapshot) => Expanded(
-        child: _buildIdgBody(idgController.idgEngine.getRecipe()),
+        child: HeroControllerScope.none(
+          child: Navigator(
+            onGenerateRoute: (RouteSettings _) => MaterialPageRoute(
+              builder: (_) =>
+                  _buildIdgScreenBody(idgController.idgEngine.getRecipe()),
+            ),
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildIdgBody(idg_core.Recipe r) {
+  Widget _buildIdgScreenBody(idg_core.Recipe r) {
     return ListView(
       padding: const EdgeInsets.all(8),
       shrinkWrap: true,
       children: [
-        _idgSelector(),
-        ExpansionPanelList(
-          children: r.steps.map((s) {
-            return ExpansionPanel(
+        _buildIdgRecipeSelector(),
+        _buildIdgRecipe(r),
+      ],
+    );
+  }
+
+  Widget _buildIdgRecipe(idg_core.Recipe r) {
+    return ExpansionPanelList(
+      children: r.steps
+          .map(
+            (s) => ExpansionPanel(
               headerBuilder: (context, isExpanded) {
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -237,20 +252,19 @@ class _IDGScreenBodyState extends State<IDGScreenBody>
               body: _buildIdgStep(s),
               isExpanded: manualOpened.contains(s) || s.isActive,
               canTapOnHeader: true,
-            );
-          }).toList(),
-          expansionCallback: (int i, bool expanded) {
-            setState(() {
-              print('callback: $i $expanded');
-              final idg_core.Step s = r.steps[i];
-              if (manualOpened.contains(s))
-                manualOpened.remove(s);
-              else
-                manualOpened.add(s);
-            });
-          },
-        )
-      ],
+            ),
+          )
+          .toList(),
+      expansionCallback: (int i, bool expanded) {
+        setState(() {
+          print('callback: $i $expanded');
+          final idg_core.Step s = r.steps[i];
+          if (manualOpened.contains(s))
+            manualOpened.remove(s);
+          else
+            manualOpened.add(s);
+        });
+      },
     );
   }
 
@@ -350,7 +364,7 @@ class _IDGScreenBodyState extends State<IDGScreenBody>
     );
   }
 
-  Widget _idgSelector() => Padding(
+  Widget _buildIdgRecipeSelector() => Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: DropdownButton<String>(
           items: idgRecipes.keys.map(
@@ -368,6 +382,15 @@ class _IDGScreenBodyState extends State<IDGScreenBody>
           onChanged: (newValue) {
             if (idgController.idgEngine.selectedRecipe == newValue) return;
             idgController.idgEngine.selectRecipe(newValue!);
+            unawaited(
+              Navigator.push<void>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      _buildIdgScreenBody(idgController.idgEngine.getRecipe()),
+                ),
+              ),
+            );
           },
         ),
       );
