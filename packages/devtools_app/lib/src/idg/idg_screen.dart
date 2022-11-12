@@ -173,8 +173,10 @@ class _IDGScreenBodyState extends State<IDGScreenBody>
         child: HeroControllerScope.none(
           child: Navigator(
             onGenerateRoute: (RouteSettings _) => MaterialPageRoute(
-              builder: (_) =>
-                  _buildIdgScreenBody(idgController.idgEngine.getRecipe()),
+              builder: (navigatorContext) => _buildIdgScreenBody(
+                idgController.idgEngine.getRecipe(),
+                navigatorContext,
+              ),
             ),
           ),
         ),
@@ -182,12 +184,12 @@ class _IDGScreenBodyState extends State<IDGScreenBody>
     );
   }
 
-  Widget _buildIdgScreenBody(idg_core.Recipe r) {
+  Widget _buildIdgScreenBody(idg_core.Recipe r, BuildContext navigatorContext) {
     return ListView(
       padding: const EdgeInsets.all(8),
       shrinkWrap: true,
       children: [
-        _buildIdgRecipeSelector(),
+        _buildIdgRecipeSelector(navigatorContext),
         _buildIdgRecipe(r),
       ],
     );
@@ -364,7 +366,7 @@ class _IDGScreenBodyState extends State<IDGScreenBody>
     );
   }
 
-  Widget _buildIdgRecipeSelector() => Padding(
+  Widget _buildIdgRecipeSelector(BuildContext navigatorContext) => Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: DropdownButton<String>(
           items: idgRecipes.keys.map(
@@ -384,10 +386,12 @@ class _IDGScreenBodyState extends State<IDGScreenBody>
             idgController.idgEngine.selectRecipe(newValue!);
             unawaited(
               Navigator.push<void>(
-                context,
+                navigatorContext,
                 MaterialPageRoute(
-                  builder: (_) =>
-                      _buildIdgScreenBody(idgController.idgEngine.getRecipe()),
+                  builder: (_) => _buildIdgScreenBody(
+                    idgController.idgEngine.getRecipe(),
+                    navigatorContext,
+                  ),
                 ),
               ),
             );
