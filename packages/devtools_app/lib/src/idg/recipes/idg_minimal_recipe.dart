@@ -4,7 +4,7 @@ import '../../screens/performance/performance_screen.dart';
 import '../../shared/globals.dart';
 import '../idg_core.dart' as idg_core;
 
-var _s0 = idg_core.Step(
+idg_core.Step _s0 = idg_core.Step(
   title: 'Hot restart the application',
   text: """
       Restart the application, you can do this by pressing 'R' in the 
@@ -146,5 +146,5 @@ var _s7 = idg_core.Step(
   ],
 );
 
-final minimalRecipe =
+final idg_core.Recipe minimalRecipe =
     idg_core.Recipe(<idg_core.Step>[_s0, _s1, _s2, _s3, _s4, _s5, _s6, _s7]);

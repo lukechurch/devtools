@@ -2,7 +2,7 @@ import 'dart:async';
 
 import '../../../devtools_app.dart' as devtools_app;
 import '../../analytics/constants.dart' as analytics_constants;
-import '../../screens/memory/memory_heap_tree_view.dart';
+import '../../screens/memory/memory_tabs.dart';
 import '../../shared/globals.dart';
 import '../idg_controller.dart';
 import '../idg_core.dart' as idg_core;

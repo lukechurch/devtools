@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:http/http.dart' as http;
 
 import '../../../devtools_app.dart' as devtools_app;
-import '../../screens/memory/memory_snapshot_models.dart';
 import '../../shared/globals.dart';
 import '../../shared/table/table.dart';
 import '../idg_controller.dart';
@@ -97,26 +96,26 @@ var _s3 = idg_core.Step(
 
       final devtools_app.MemoryController memoryScreenController =
           globals[devtools_app.MemoryController];
-      final lastAnalysis = memoryScreenController
-          .lastSnapshot!.controller.completedAnalyses.last;
-      lastAnalysis.expand();
+      // final lastAnalysis = memoryScreenController
+      //     .lastSnapshot!.controller.completedAnalyses.last;
+      // lastAnalysis.expand();
 
-      final externalsNode = lastAnalysis.children
-          .singleWhere((element) => element.name == 'Externals');
-      externalsNode.expand();
+      // final externalsNode = lastAnalysis.children
+      //     .singleWhere((element) => element.name == 'Externals');
+      // externalsNode.expand();
 
-      final imageNode =
-          externalsNode.children.singleWhere((e) => e.name == '_Image');
-      imageNode.expandCascading();
+      // final imageNode =
+      //     externalsNode.children.singleWhere((e) => e.name == '_Image');
+      // imageNode.expandCascading();
 
-      // Select the _Image node
-      imageNode.select();
-      memoryScreenController.selectionSnapshotNotifier.value =
-          Selection<Reference?>(
-        node: imageNode,
-        nodeIndex: imageNode.index,
-        scrollIntoView: true,
-      );
+      // // Select the _Image node
+      // imageNode.select();
+      // memoryScreenController.selectionSnapshotNotifier.value =
+      //     Selection<Reference?>(
+      //   node: imageNode,
+      //   nodeIndex: imageNode.index,
+      //   scrollIntoView: true,
+      // );
 
       // Let the IDG engine know that the node has been expanded
       final IDGController idgController = globals[IDGController];
@@ -155,25 +154,25 @@ var _s4 = idg_core.Step(
 
       final devtools_app.MemoryController memoryScreenController =
           globals[devtools_app.MemoryController];
-      final lastAnalysis = memoryScreenController
-          .lastSnapshot!.controller.completedAnalyses.last;
-      lastAnalysis.expand();
+      // final lastAnalysis = memoryScreenController
+      //     .lastSnapshot!.controller.completedAnalyses.last;
+      // lastAnalysis.expand();
 
-      final libraryFiltersNode = lastAnalysis.children
-          .singleWhere((element) => element.name == 'Library filters');
-      libraryFiltersNode.expand();
+      // final libraryFiltersNode = lastAnalysis.children
+      //     .singleWhere((element) => element.name == 'Library filters');
+      // libraryFiltersNode.expand();
 
-      final imageCacheNode = libraryFiltersNode.children
-          .singleWhere((element) => element.name == 'ImageCache');
-      imageCacheNode.expand();
+      // final imageCacheNode = libraryFiltersNode.children
+      //     .singleWhere((element) => element.name == 'ImageCache');
+      // imageCacheNode.expand();
 
-      // Select the _Image node
-      imageCacheNode.select();
-      memoryScreenController.selectionSnapshotNotifier.value = Selection(
-        node: imageCacheNode,
-        nodeIndex: imageCacheNode.index,
-        scrollIntoView: true,
-      );
+      // // Select the _Image node
+      // imageCacheNode.select();
+      // memoryScreenController.selectionSnapshotNotifier.value = Selection(
+      //   node: imageCacheNode,
+      //   nodeIndex: imageCacheNode.index,
+      //   scrollIntoView: true,
+      // );
 
       // Let the IDG engine know that the node has been expanded
       final IDGController idgController = globals[IDGController];
@@ -232,25 +231,25 @@ var _s7 = idg_core.Step(
 
       final devtools_app.MemoryController memoryScreenController =
           globals[devtools_app.MemoryController];
-      final lastAnalysis = memoryScreenController
-          .lastSnapshot!.controller.completedAnalyses.last;
-      lastAnalysis.expand();
+      // final lastAnalysis = memoryScreenController
+      //     .lastSnapshot!.controller.completedAnalyses.last;
+      // lastAnalysis.expand();
 
-      final externalsNode = lastAnalysis.children
-          .singleWhere((element) => element.name == 'Externals');
-      externalsNode.expand();
+      // final externalsNode = lastAnalysis.children
+      //     .singleWhere((element) => element.name == 'Externals');
+      // externalsNode.expand();
 
-      final imageNode = externalsNode.children
-          .singleWhere((element) => element.name == '_Image');
-      imageNode.expandCascading();
+      // final imageNode = externalsNode.children
+      //     .singleWhere((element) => element.name == '_Image');
+      // imageNode.expandCascading();
 
-      // Select the _Image node
-      imageNode.select();
-      memoryScreenController.selectionSnapshotNotifier.value = Selection(
-        node: imageNode,
-        nodeIndex: imageNode.index,
-        scrollIntoView: true,
-      );
+      // // Select the _Image node
+      // imageNode.select();
+      // memoryScreenController.selectionSnapshotNotifier.value = Selection(
+      //   node: imageNode,
+      //   nodeIndex: imageNode.index,
+      //   scrollIntoView: true,
+      // );
 
       // Let the IDG engine know that the node has been expanded
       final IDGController idgController = globals[IDGController];
