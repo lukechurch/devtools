@@ -56,8 +56,8 @@ var _s2 = idg_core.Step(
   ),
   buttons: [
     idg_core.Action('Show me the Snapshot button', () async {
-      final devtools_app.MemoryController memoryScreenController =
-          globals[devtools_app.MemoryController];
+      // final devtools_app.MemoryController memoryScreenController =
+      //     globals[devtools_app.MemoryController];
       // memoryScreenController.toggleSnapshotButtonHighlighted(true);
       // Timer(
       //   const Duration(milliseconds: 300),

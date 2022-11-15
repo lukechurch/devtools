@@ -16,7 +16,6 @@ import 'panes/allocation_tracing/allocation_profile_tracing_view.dart';
 import 'panes/diff/diff_pane.dart';
 import 'panes/leaks/leaks_pane.dart';
 
-@visibleForTesting
 class MemoryScreenKeys {
   static const leaksTab = Key('Leaks Tab');
   static const dartHeapTableProfileTab = Key('Dart Heap Profile Tab');
@@ -77,7 +76,20 @@ class _MemoryTabsState extends State<MemoryTabs>
     _tabController.addListener(_onTabChanged);
   }
 
-  void _onTabChanged() => _currentTab.value = _tabController.index;
+  void _onTabChanged() {
+    _currentTab.value = _tabController.index;
+    controller.currentTab.value = tabIndexToTabKey(_currentTab.value)!;
+  }
+
+  int tabKeyToTabIndex(Key tabKey) {
+    final tabIndex = _tabs.indexWhere((tab) => tab.key == tabKey);
+    if (tabIndex == -1) print('Unable to find tab with key $tabKey');
+    return tabIndex;
+  }
+
+  Key? tabIndexToTabKey(int tabIndex) {
+    return _tabs[tabIndex].key;
+  }
 
   @override
   void didChangeDependencies() {
@@ -91,6 +103,17 @@ class _MemoryTabsState extends State<MemoryTabs>
     addAutoDisposeListener(controller.shouldShowLeaksTab, () {
       setState(() {
         _initTabs();
+      });
+    });
+
+    _currentTab.value = tabKeyToTabIndex(controller.currentTab.value);
+    addAutoDisposeListener(controller.currentTab, () {
+      setState(() {
+        _currentTab.value = tabKeyToTabIndex(controller.currentTab.value);
+        _tabController.animateTo(
+          _currentTab.value,
+          duration: const Duration(milliseconds: 300),
+        );
       });
     });
   }

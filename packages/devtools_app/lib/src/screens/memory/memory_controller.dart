@@ -20,6 +20,7 @@ import '../../service/service_manager.dart';
 import '../../shared/globals.dart';
 import '../../shared/utils.dart';
 import 'memory_protocol.dart';
+import 'memory_tabs.dart';
 import 'panes/allocation_profile/allocation_profile_table_view_controller.dart';
 import 'panes/diff/controller/diff_pane_controller.dart';
 import 'primitives/memory_timeline.dart';
@@ -130,6 +131,9 @@ class MemoryController extends DisposableController
       refreshAllCharts();
     });
   }
+
+  final ValueNotifier<Key> currentTab =
+      ValueNotifier(MemoryScreenKeys.dartHeapTableProfileTab);
 
   /// The controller is late to enable test injection.
   late final DiffPaneController diffPaneController;
