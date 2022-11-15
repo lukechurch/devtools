@@ -1,3 +1,4 @@
+import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
 
 void main() {
@@ -47,6 +48,7 @@ class _MyHomePageState extends State<MyHomePage> {
     _incrementer = MyIncrementer(() {
       if (identityHashCode(context) > 0) {
         incrementer.increment();
+        dev.postEvent("counter-incremented", {"value": _counter});
       }
     });
 

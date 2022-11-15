@@ -225,8 +225,8 @@ class MaskUntil extends Sensor {
 }
 
 class CountingSensor extends Sensor {
-  CountingSensor(String presentationName, String sensorName, {this.counter = 0})
-      : super(presentationName, sensorName) {
+  CountingSensor(String sensorName, String presentationName, {this.counter = 0})
+      : super(sensorName, presentationName) {
     reset();
   }
 

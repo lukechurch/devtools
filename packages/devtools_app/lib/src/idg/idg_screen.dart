@@ -18,8 +18,9 @@ import 'idg_recipes.dart';
 final loggingSearchFieldKey = GlobalKey(debugLabel: 'LoggingSearchFieldKey');
 
 final idgRecipes = {
-  'Find a memory leak - images case study': oomCaseStudyRecipe,
+  // 'Find a memory leak - images case study': oomCaseStudyRecipe,
   'Find a memory leak - general app': memoryPerfRecipe,
+  'Find a memory leak - leaking counter': leakingCounterRecipe,
   'Report an issue': openGithubIssueRecipe,
   // 'Minimal Recipe': minimalRecipe,
 };
