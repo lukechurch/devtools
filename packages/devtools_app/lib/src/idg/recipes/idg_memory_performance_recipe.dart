@@ -39,21 +39,21 @@ var _s1 = idg_core.Step(
   ),
   buttons: [
     idg_core.Action('Show me the Snapshot button', () async {
-      final devtools_app.MemoryController memoryScreenController =
-          globals[devtools_app.MemoryController];
-      memoryScreenController.toggleSnapshotButtonHighlighted(true);
-      Timer(
-        const Duration(milliseconds: 300),
-        () => memoryScreenController.toggleSnapshotButtonHighlighted(false),
-      );
-      Timer(
-        const Duration(milliseconds: 600),
-        () => memoryScreenController.toggleSnapshotButtonHighlighted(true),
-      );
-      Timer(
-        const Duration(milliseconds: 900),
-        () => memoryScreenController.toggleSnapshotButtonHighlighted(false),
-      );
+      // final devtools_app.MemoryController memoryScreenController =
+      //     globals[devtools_app.MemoryController];
+      // memoryScreenController.toggleSnapshotButtonHighlighted(true);
+      // Timer(
+      //   const Duration(milliseconds: 300),
+      //   () => memoryScreenController.toggleSnapshotButtonHighlighted(false),
+      // );
+      // Timer(
+      //   const Duration(milliseconds: 600),
+      //   () => memoryScreenController.toggleSnapshotButtonHighlighted(true),
+      // );
+      // Timer(
+      //   const Duration(milliseconds: 900),
+      //   () => memoryScreenController.toggleSnapshotButtonHighlighted(false),
+      // );
     })
   ],
 );
@@ -115,21 +115,21 @@ var _s3 = idg_core.Step(
   ),
   buttons: [
     idg_core.Action('Show me the Snapshot button', () async {
-      final devtools_app.MemoryController memoryScreenController =
-          globals[devtools_app.MemoryController];
-      memoryScreenController.toggleSnapshotButtonHighlighted(true);
-      Timer(
-        const Duration(milliseconds: 300),
-        () => memoryScreenController.toggleSnapshotButtonHighlighted(false),
-      );
-      Timer(
-        const Duration(milliseconds: 600),
-        () => memoryScreenController.toggleSnapshotButtonHighlighted(true),
-      );
-      Timer(
-        const Duration(milliseconds: 900),
-        () => memoryScreenController.toggleSnapshotButtonHighlighted(false),
-      );
+      // final devtools_app.MemoryController memoryScreenController =
+      //     globals[devtools_app.MemoryController];
+      // memoryScreenController.toggleSnapshotButtonHighlighted(true);
+      // Timer(
+      //   const Duration(milliseconds: 300),
+      //   () => memoryScreenController.toggleSnapshotButtonHighlighted(false),
+      // );
+      // Timer(
+      //   const Duration(milliseconds: 600),
+      //   () => memoryScreenController.toggleSnapshotButtonHighlighted(true),
+      // );
+      // Timer(
+      //   const Duration(milliseconds: 900),
+      //   () => memoryScreenController.toggleSnapshotButtonHighlighted(false),
+      // );
     })
   ],
 );
@@ -162,25 +162,25 @@ idg_core.Action _generateExpandAnalysisExternals() =>
 
       final devtools_app.MemoryController memoryScreenController =
           globals[devtools_app.MemoryController];
-      final lastAnalysis = memoryScreenController
-          .lastSnapshot!.controller.completedAnalyses.last;
-      lastAnalysis.expand();
+      // final lastAnalysis = memoryScreenController
+      //     .lastSnapshot!.controller.completedAnalyses.last;
+      // lastAnalysis.expand();
 
-      final externalsNode = lastAnalysis.children
-          .singleWhere((element) => element.name == 'Externals');
-      externalsNode.expand();
+      // final externalsNode = lastAnalysis.children
+      //     .singleWhere((element) => element.name == 'Externals');
+      // externalsNode.expand();
 
-      final imageNode = externalsNode.children
-          .singleWhere((element) => element.name == '_Image');
-      imageNode.expandCascading();
+      // final imageNode = externalsNode.children
+      //     .singleWhere((element) => element.name == '_Image');
+      // imageNode.expandCascading();
 
-      // Select the _Image node
-      imageNode.select();
-      memoryScreenController.selectionSnapshotNotifier.value = Selection(
-        node: imageNode,
-        nodeIndex: imageNode.index,
-        scrollIntoView: true,
-      );
+      // // Select the _Image node
+      // imageNode.select();
+      // memoryScreenController.selectionSnapshotNotifier.value = Selection(
+      //   node: imageNode,
+      //   nodeIndex: imageNode.index,
+      //   scrollIntoView: true,
+      // );
 
       // Let the IDG engine know that the node has been expanded
       final IDGController idgController = globals[IDGController];
@@ -199,25 +199,25 @@ idg_core.Action _generateExpandAnalysisLibraryFilters() =>
 
       final devtools_app.MemoryController memoryScreenController =
           globals[devtools_app.MemoryController];
-      final lastAnalysis = memoryScreenController
-          .lastSnapshot!.controller.completedAnalyses.last;
-      lastAnalysis.expand();
+      // final lastAnalysis = memoryScreenController
+      //     .lastSnapshot!.controller.completedAnalyses.last;
+      // lastAnalysis.expand();
 
-      final libraryFiltersNode = lastAnalysis.children
-          .singleWhere((element) => element.name == 'Library filters');
-      libraryFiltersNode.expand();
+      // final libraryFiltersNode = lastAnalysis.children
+      //     .singleWhere((element) => element.name == 'Library filters');
+      // libraryFiltersNode.expand();
 
-      final imageCacheNode = libraryFiltersNode.children
-          .singleWhere((element) => element.name == 'ImageCache');
-      imageCacheNode.expand();
+      // final imageCacheNode = libraryFiltersNode.children
+      //     .singleWhere((element) => element.name == 'ImageCache');
+      // imageCacheNode.expand();
 
-      // Select the _Image node
-      imageCacheNode.select();
-      memoryScreenController.selectionSnapshotNotifier.value = Selection(
-        node: imageCacheNode,
-        nodeIndex: imageCacheNode.index,
-        scrollIntoView: true,
-      );
+      // // Select the _Image node
+      // imageCacheNode.select();
+      // memoryScreenController.selectionSnapshotNotifier.value = Selection(
+      //   node: imageCacheNode,
+      //   nodeIndex: imageCacheNode.index,
+      //   scrollIntoView: true,
+      // );
 
       // Let the IDG engine know that the node has been expanded
       final IDGController idgController = globals[IDGController];
@@ -236,19 +236,19 @@ idg_core.Action _generateExpandSnapshotSrc() =>
 
       final devtools_app.MemoryController memoryScreenController =
           globals[devtools_app.MemoryController];
-      final lastSnapshot = memoryScreenController.activeSnapshot;
-      lastSnapshot.expand();
+      // final lastSnapshot = memoryScreenController.activeSnapshot;
+      // lastSnapshot.expand();
 
-      final srcNode =
-          lastSnapshot.children.singleWhere((element) => element.name == 'src');
-      srcNode.expand();
+      // final srcNode =
+      //     lastSnapshot.children.singleWhere((element) => element.name == 'src');
+      // srcNode.expand();
 
-      srcNode.select();
-      memoryScreenController.selectionSnapshotNotifier.value = Selection(
-        node: srcNode,
-        nodeIndex: srcNode.index,
-        scrollIntoView: true,
-      );
+      // srcNode.select();
+      // memoryScreenController.selectionSnapshotNotifier.value = Selection(
+      //   node: srcNode,
+      //   nodeIndex: srcNode.index,
+      //   scrollIntoView: true,
+      // );
 
       // Let the IDG engine know that the node has been expanded
       final IDGController idgController = globals[IDGController];
