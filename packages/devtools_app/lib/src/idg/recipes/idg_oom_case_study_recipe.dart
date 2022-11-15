@@ -57,21 +57,21 @@ var _s2 = idg_core.Step(
   ),
   buttons: [
     idg_core.Action('Show me the Snapshot button', () async {
-      final devtools_app.MemoryController memoryScreenController =
-          globals[devtools_app.MemoryController];
-      memoryScreenController.toggleSnapshotButtonHighlighted(true);
-      Timer(
-        const Duration(milliseconds: 300),
-        () => memoryScreenController.toggleSnapshotButtonHighlighted(false),
-      );
-      Timer(
-        const Duration(milliseconds: 600),
-        () => memoryScreenController.toggleSnapshotButtonHighlighted(true),
-      );
-      Timer(
-        const Duration(milliseconds: 900),
-        () => memoryScreenController.toggleSnapshotButtonHighlighted(false),
-      );
+      // final devtools_app.MemoryController memoryScreenController =
+      //     globals[devtools_app.MemoryController];
+      // memoryScreenController.toggleSnapshotButtonHighlighted(true);
+      // Timer(
+      //   const Duration(milliseconds: 300),
+      //   () => memoryScreenController.toggleSnapshotButtonHighlighted(false),
+      // );
+      // Timer(
+      //   const Duration(milliseconds: 600),
+      //   () => memoryScreenController.toggleSnapshotButtonHighlighted(true),
+      // );
+      // Timer(
+      //   const Duration(milliseconds: 900),
+      //   () => memoryScreenController.toggleSnapshotButtonHighlighted(false),
+      // );
     })
   ],
 );

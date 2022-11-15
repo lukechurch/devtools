@@ -23,6 +23,7 @@ import '../../shared/table/table.dart';
 import '../../shared/utils.dart';
 import '../../ui/search.dart';
 import 'memory_graph_model.dart';
+import 'memory_heap_tree_view.dart';
 import 'memory_protocol.dart';
 import 'memory_snapshot_models.dart';
 import 'panes/allocation_profile/allocation_profile_table_view_controller.dart';
@@ -140,6 +141,9 @@ class MemoryController extends DisposableController
       refreshAllCharts();
     });
   }
+
+  final ValueNotifier<Key> currentTab =
+      ValueNotifier(MemoryScreenKeys.dartHeapTableProfileTab);
 
   /// The controller is late to enable test injection.
   late final DiffPaneController diffPaneController;
@@ -288,11 +292,6 @@ class MemoryController extends DisposableController
   void toggleTreeMapVisible(bool value) {
     _treeMapVisible.value = value;
   }
-
-  final _snapshotButtonHighlighted = ValueNotifier<bool>(false);
-  ValueListenable get snapshotButtonHighlighted => _snapshotButtonHighlighted;
-  void toggleSnapshotButtonHighlighted(bool value) =>
-      _snapshotButtonHighlighted.value = value;
 
   bool isAnalyzeButtonEnabled() => computeSnapshotToAnalyze != null;
 

@@ -12,7 +12,6 @@ import 'package:intl/intl.dart';
 import '../../analytics/analytics.dart' as ga;
 import '../../analytics/constants.dart' as analytics_constants;
 import '../../config_specific/logger/logger.dart' as logger;
-import '../../idg/idg_controller.dart';
 import '../../primitives/auto_dispose_mixin.dart';
 import '../../primitives/utils.dart';
 import '../../shared/common_widgets.dart';
@@ -122,7 +121,6 @@ String buildRegExs(Map<WildcardMatch, List<String>> matchingCriteria) {
 
 final String knownClassesRegExs = buildRegExs(knowClassesToAnalyzeForImages);
 
-@visibleForTesting
 class MemoryScreenKeys {
   static const searchButton = Key('Snapshot Search');
   static const filterButton = Key('Snapshot Filter');
@@ -177,7 +175,6 @@ class _HeapTreeViewState extends State<HeapTreeView>
   int lastSnapshotMemoryTotal = 0;
 
   late bool treeMapVisible;
-  late bool isSnapshotButtonHighlighted;
 
   late AnimationController _animation;
 
@@ -219,7 +216,20 @@ class _HeapTreeViewState extends State<HeapTreeView>
     _tabController.addListener(_onTabChanged);
   }
 
-  void _onTabChanged() => _currentTab.value = _tabController.index;
+  void _onTabChanged() {
+    _currentTab.value = _tabController.index;
+    controller.currentTab.value = tabIndexToTabKey(_currentTab.value)!;
+  }
+
+  int tabKeyToTabIndex(Key tabKey) {
+    final tabIndex = _tabs.indexWhere((tab) => tab.key == tabKey);
+    if (tabIndex == -1) print('Unable to find tab with key $tabKey');
+    return tabIndex;
+  }
+
+  Key? tabIndexToTabKey(int tabIndex) {
+    return _tabs[tabIndex].key;
+  }
 
   @override
   void didChangeDependencies() {
@@ -290,11 +300,14 @@ class _HeapTreeViewState extends State<HeapTreeView>
       });
     });
 
-    isSnapshotButtonHighlighted = controller.snapshotButtonHighlighted.value;
-    addAutoDisposeListener(controller.snapshotButtonHighlighted, () {
+    _currentTab.value = tabKeyToTabIndex(controller.currentTab.value);
+    addAutoDisposeListener(controller.currentTab, () {
       setState(() {
-        isSnapshotButtonHighlighted =
-            controller.snapshotButtonHighlighted.value;
+        _currentTab.value = tabKeyToTabIndex(controller.currentTab.value);
+        _tabController.animateTo(
+          _currentTab.value,
+          duration: const Duration(milliseconds: 200),
+        );
       });
     });
   }
@@ -615,7 +628,6 @@ class _HeapTreeViewState extends State<HeapTreeView>
             icon: Icons.camera,
             label: 'Take Heap Snapshot',
             onPressed: _isSnapshotRunning ? null : _takeHeapSnapshot,
-            color: isSnapshotButtonHighlighted ? Colors.red : Colors.white,
           ),
           const SizedBox(width: defaultSpacing),
           Row(
@@ -830,13 +842,6 @@ class _HeapTreeViewState extends State<HeapTreeView>
     }
 
     controller.memoryTimeline.addSnapshotEvent(auto: !userGenerated);
-
-    if (userGenerated) {
-      final IDGController idgController = globals[IDGController];
-      idgController.log(
-        LogData('mem-snapshot', '', DateTime.now().millisecondsSinceEpoch),
-      );
-    }
 
     setState(() {
       snapshotState = SnapshotStatus.streaming;
