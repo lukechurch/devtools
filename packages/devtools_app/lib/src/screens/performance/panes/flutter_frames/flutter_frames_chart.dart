@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../analytics/analytics.dart' as ga;
 import '../../../../analytics/constants.dart' as analytics_constants;
+import '../../../../analytics/metrics.dart';
 import '../../../../framework/scaffold.dart';
 import '../../../../primitives/auto_dispose_mixin.dart';
 import '../../../../primitives/utils.dart';
@@ -127,10 +128,8 @@ class _FlutterFramesChartState extends State<_FlutterFramesChart>
   }
 
   void selectFrame(int index) {
-    unawaited(
-      widget.framesController.toggleSelectedFrame(
-        widget.framesController.flutterFrames.value[index],
-      ),
+    widget.framesController.handleSelectedFrame(
+      widget.framesController.flutterFrames.value[index],
     );
   }
 
@@ -512,7 +511,7 @@ class FlutterFramesChartItem extends StatelessWidget {
         ),
       );
     }
-    unawaited(framesController.toggleSelectedFrame(frame));
+    framesController.handleSelectedFrame(frame);
   }
 }
 
@@ -530,7 +529,7 @@ class FlutterFrameTooltip extends StatelessWidget {
 
   final bool hasShaderJank;
 
-  static const double _moreInfoLinkWidth = 85.0;
+  static const double _moreInfoLinkWidth = 100.0;
 
   static const _textMeasurementBuffer = 4.0;
 

@@ -4,7 +4,7 @@
 
 import 'package:flutter/material.dart';
 
-import '_perfetto_controller_web.dart';
+import 'perfetto_controller.dart';
 
 class Perfetto extends StatelessWidget {
   const Perfetto({
@@ -18,8 +18,8 @@ class Perfetto extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: Colors.white,
-      child: const HtmlElementView(
-        viewType: PerfettoController.viewId,
+      child: HtmlElementView(
+        viewType: perfettoController.viewId,
       ),
     );
   }

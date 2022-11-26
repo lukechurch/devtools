@@ -9,7 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:vm_service/vm_service.dart';
 
-import '../../test_infra/matchers.dart';
+import '../../test_infra/matchers/matchers.dart';
 import '../../test_infra/test_data/performance_raster_stats.dart';
 
 void main() {
@@ -79,16 +79,14 @@ void main() {
     testWidgets('can change layer selection', (tester) async {
       await pumpRenderingLayerVisualizer(tester);
 
-      final layers = controller.rasterStats.value.layerSnapshots;
+      final rasterStats = controller.rasterStats.value!;
+      final layers = rasterStats.layerSnapshots;
       final firstLayer = layers.first;
       final secondLayer = layers.last;
       expect(firstLayer.displayName, equals('Layer 12731'));
       expect(secondLayer.displayName, equals('Layer 12734'));
 
-      expect(
-        controller.rasterStats.value.selectedSnapshot,
-        equals(firstLayer),
-      );
+      expect(rasterStats.selectedSnapshot, equals(firstLayer));
 
       await tester.tap(find.richText('Layer 12734'));
       await tester.pumpAndSettle();

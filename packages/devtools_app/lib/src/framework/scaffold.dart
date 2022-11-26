@@ -15,6 +15,7 @@ import '../config_specific/ide_theme/ide_theme.dart';
 import '../config_specific/import_export/import_export.dart';
 import '../idg/idg_controller.dart';
 import '../primitives/auto_dispose_mixin.dart';
+import '../primitives/simple_items.dart';
 import '../screens/debugger/console.dart';
 import '../screens/debugger/debugger_screen.dart';
 import '../shared/banner_messages.dart';
@@ -523,7 +524,7 @@ class SimpleScreen extends Screen {
           showFloatingDebuggerControls: false,
         );
 
-  static const id = 'simple';
+  static const id = ScreenIds.simple;
 
   final Widget child;
 
