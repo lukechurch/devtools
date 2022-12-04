@@ -47,6 +47,7 @@ class MemoryTabView extends StatelessWidget {
           tabs: tabs,
           tabViews: tabViews,
           gaScreen: analytics_constants.memory,
+          selectedTabNotifier: controller.currentTab,
         );
       },
     );
