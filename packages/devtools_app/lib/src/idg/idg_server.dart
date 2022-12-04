@@ -1,6 +1,7 @@
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 
+import '../../devtools_app.dart';
 import 'idg_controller.dart';
 
 late IDGServer server;
@@ -32,13 +33,12 @@ class IDGServer {
 
   Response _echoRequest(Request request) {
     final String reqUrl = Uri.decodeFull(request.url.toString());
-    controller.log(
-      LogData(
-        'vscode',
-        reqUrl,
-        DateTime.now().millisecondsSinceEpoch,
-        summary: reqUrl,
-      ),
+    eventsManager.addEvent(
+      StructuredLogEvent('vscode', data: {
+        'data': reqUrl,
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+        'summary': reqUrl,
+      }),
     );
 
     return Response.ok('Request for "${request.url}"');

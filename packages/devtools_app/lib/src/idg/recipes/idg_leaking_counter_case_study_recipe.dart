@@ -1,10 +1,5 @@
-import 'dart:async';
-
-import '../../../devtools_app.dart' as devtools_app;
-import '../../analytics/constants.dart' as analytics_constants;
-import '../../screens/memory/memory_tabs.dart';
-import '../../shared/globals.dart';
-import '../idg_controller.dart';
+import '../../../devtools_app.dart';
+import '../idg_apis.dart';
 import '../idg_core.dart' as idg_core;
 
 var _s0 = idg_core.Step(
@@ -13,16 +8,16 @@ var _s0 = idg_core.Step(
       After DevTools has connected to the running Flutter application, click on
       the Memory tab or click the button below''',
   nextStepGuard: idg_core.CondOr(
-    () => devtools_app.selectedPage == devtools_app.MemoryScreen.id,
+    () => discoverableApp.selectedPageId == DiscoverableMemoryPage.id,
     idg_core.PresenceSensor(
-      'DevToolsRouter.navigateTo.memory',
+      'page-changed.memory',
       'Memory tab selected',
     ),
   ),
   buttons: [
     idg_core.Action('go to Memory tab', () async {
       print('go to Memory tab button clicked');
-      frameworkController.notifyShowPageId(devtools_app.MemoryScreen.id);
+      discoverableApp.selectPage(DiscoverableMemoryPage.id);
     })
   ],
 );
@@ -34,10 +29,18 @@ var _s1 = idg_core.Step(
       Dart VM Heap''',
   nextStepGuard: idg_core.MaskUntil(
     () => _s0.isDone,
-    idg_core.PresenceSensor('mem-snapshot', 'snapshot taken'),
+    idg_core.PresenceSensor(
+      DiscoverableMemoryPage.memorySnapshotTaken,
+      'snapshot taken',
+    ),
   ),
   buttons: [
-    _generateTakeSnapshotAction(),
+    idg_core.Action(
+      'Take a snapshot',
+      () async => discoverableApp.memoryPage!
+        ..changeTabAction(DiscoverableMemoryPage.diffTab)
+        ..takeSnapshotAction(),
+    )
   ],
 );
 
@@ -62,16 +65,10 @@ var _s2 = idg_core.Step(
     idg_core.PresenceSensor('next-step-ready', 'ready for next step'),
   ),
   buttons: [
-    idg_core.Action('done', () async {
-      final IDGController idgController = globals[IDGController];
-      idgController.log(
-        LogData(
-          'next-step-ready',
-          '',
-          DateTime.now().millisecondsSinceEpoch,
-        ),
-      );
-    })
+    idg_core.Action(
+      'done',
+      () async => eventsManager.addEvent(StructuredLogEvent('next-step-ready')),
+    ),
   ],
 );
 
@@ -84,10 +81,18 @@ var _s3 = idg_core.Step(
       When you're done, take another snapshot.''',
   nextStepGuard: idg_core.MaskUntil(
     () => _s2.isDone,
-    idg_core.PresenceSensor('mem-snapshot', 'snapshot taken'),
+    idg_core.PresenceSensor(
+      DiscoverableMemoryPage.memorySnapshotTaken,
+      'snapshot taken',
+    ),
   ),
   buttons: [
-    _generateTakeSnapshotAction(),
+    idg_core.Action(
+      'Take a snapshot',
+      () async => discoverableApp.memoryPage!
+        ..changeTabAction(DiscoverableMemoryPage.diffTab)
+        ..takeSnapshotAction(),
+    ),
   ],
 );
 
@@ -107,16 +112,10 @@ var _s4 = idg_core.Step(
     idg_core.PresenceSensor('next-step-ready', 'ready for next step'),
   ),
   buttons: [
-    idg_core.Action('done', () async {
-      final IDGController idgController = globals[IDGController];
-      idgController.log(
-        LogData(
-          'next-step-ready',
-          '',
-          DateTime.now().millisecondsSinceEpoch,
-        ),
-      );
-    })
+    idg_core.Action(
+      'done',
+      () async => eventsManager.addEvent(StructuredLogEvent('next-step-ready')),
+    ),
   ],
 );
 
@@ -144,17 +143,10 @@ var _s5 = idg_core.Step(
     idg_core.PresenceSensor('app-start', 'App reloaded'),
   ),
   buttons: [
-    idg_core.Action('Hot reload', () async {
-      await serviceManager.performHotReload();
-      final IDGController idgController = globals[IDGController];
-      idgController.log(
-        LogData(
-          'app-start',
-          '',
-          DateTime.now().millisecondsSinceEpoch,
-        ),
-      );
-    })
+    idg_core.Action(
+      'Hot reload',
+      () async => await serviceManager.performHotReload(),
+    ),
   ],
 );
 
@@ -183,20 +175,3 @@ var _s6 = idg_core.Step(
 final leakingCounterRecipe = idg_core.Recipe(
   <idg_core.Step>[_s0, _s1, _s2, _s3, _s4, _s5, _s6],
 );
-
-idg_core.Action _generateTakeSnapshotAction() {
-  return idg_core.Action('Take a snapshot', () async {
-    final devtools_app.MemoryController memController =
-        globals[devtools_app.MemoryController];
-
-    memController.currentTab.value = MemoryScreenKeys.diffTab;
-
-    final takeSnapshot = memController.diffPaneController.takeSnapshotHandler(
-      analytics_constants.MemoryEvent.diffTakeSnapshotControlPane,
-    );
-    if (takeSnapshot == null)
-      print("takeSnapshotHandler returned null, can't take snapshot");
-    else
-      takeSnapshot();
-  });
-}

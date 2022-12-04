@@ -1,6 +1,5 @@
 import 'package:url_launcher/url_launcher.dart' as url_launcher;
-import '../../shared/globals.dart';
-import '../idg_controller.dart';
+import '../../../devtools_app.dart';
 import '../idg_core.dart' as idg_core;
 
 var _s0 = idg_core.Step(
@@ -10,16 +9,11 @@ var _s0 = idg_core.Step(
   nextStepGuard:
       idg_core.PresenceSensor('description-done', 'description done'),
   buttons: [
-    idg_core.Action('Done', () async {
-      final IDGController idgController = globals[IDGController];
-      idgController.log(
-        LogData(
-          'description-done',
-          '',
-          DateTime.now().millisecondsSinceEpoch,
-        ),
-      );
-    })
+    idg_core.Action(
+      'Done',
+      () async =>
+          eventsManager.addEvent(StructuredLogEvent('description-done')),
+    ),
   ],
 );
 
@@ -39,14 +33,7 @@ var _s1 = idg_core.Step(
     idg_core.Action('Start', () async {
       _timestampS1 = DateTime.now();
       _countingSensorStart = _gcCountingSensor!.counter;
-      final IDGController idgController = globals[IDGController];
-      idgController.log(
-        LogData(
-          'start-reproduction',
-          '',
-          DateTime.now().millisecondsSinceEpoch,
-        ),
-      );
+      eventsManager.addEvent(StructuredLogEvent('start-reproduction'));
     }),
   ],
 );
@@ -61,7 +48,6 @@ var _s2 = idg_core.Step(
     () => _s1.isDone,
     _gcCountingSensor =
         idg_core.CountingSensor('gc', 'garbage collection seen'),
-    // idg_core.CountingSensor('gc', 'garbage collection seen'),
   ),
   buttons: [],
 );
@@ -83,14 +69,7 @@ var _s3 = idg_core.Step(
     idg_core.Action('Done', () async {
       _timestampS2 = DateTime.now();
       _countingSensorEnd = _gcCountingSensor!.counter;
-      final IDGController idgController = globals[IDGController];
-      idgController.log(
-        LogData(
-          'stop-reproduction',
-          '',
-          DateTime.now().millisecondsSinceEpoch,
-        ),
-      );
+      eventsManager.addEvent(StructuredLogEvent('stop-reproduction'));
     }),
   ],
 );
@@ -121,14 +100,8 @@ ${_countingSensorEnd - _countingSensorStart} GC events in ${_timestampS2!.differ
         parsedUrl = parsedUrl.replace(queryParameters: query);
         final success = await url_launcher.launchUrl(parsedUrl);
         if (success) {
-          final IDGController idgController = globals[IDGController];
-          idgController.log(
-            LogData(
-              'issue-opened-successfully',
-              '',
-              DateTime.now().millisecondsSinceEpoch,
-            ),
-          );
+          eventsManager
+              .addEvent(StructuredLogEvent('issue-opened-successfully'));
         }
       } else {
         print('Unable to open $parsedUrl');

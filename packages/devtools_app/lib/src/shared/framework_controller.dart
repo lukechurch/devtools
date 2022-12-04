@@ -57,15 +57,11 @@ class FrameworkController {
   /// Notify the controller that the current page has changed.
   void notifyPageChange(PageChangeEvent page) {
     _pageChangeController.add(page);
+    eventsManager.addEvent(StructuredLogEvent('page-changed.${page.id}'));
   }
 
   /// Notifies when a device disconnects from DevTools.
   Stream get onDisconnected => _disconnectedController.stream;
-
-  /// Example for how to create and respond to new actions
-  final StreamController<int> _frameStream = StreamController.broadcast();
-  Stream<int> get onSelectFrame => _frameStream.stream;
-  void selectFrame(int index) => _frameStream.add(index);
 
   void _init() {
     serviceManager.connectedState.addListener(() {

@@ -7,7 +7,6 @@ import 'dart:collection';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import '../idg/idg_controller.dart';
 import '../primitives/utils.dart';
 import 'globals.dart';
 
@@ -27,8 +26,6 @@ class DevToolsRouteConfiguration {
   final String page;
   final Map<String, String?> args;
 }
-
-String? selectedPage;
 
 /// Converts between structured [DevToolsRouteConfiguration] (our internal data
 /// for pages/routing) and [RouteInformation] (generic data that can be persisted
@@ -149,11 +146,6 @@ class DevToolsRouterDelegate extends RouterDelegate<DevToolsRouteConfiguration>
       return;
     }
 
-    final IDGController idgController = globals[IDGController];
-    idgController.log(LogData('DevToolsRouter.navigateTo.$page', '',
-        DateTime.now().millisecondsSinceEpoch));
-
-    selectedPage = page;
     navigate(page, argUpdates);
   }
 

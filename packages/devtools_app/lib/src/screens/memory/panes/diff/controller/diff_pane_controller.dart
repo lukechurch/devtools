@@ -11,10 +11,10 @@ import 'package:flutter/foundation.dart';
 import '../../../../../analytics/analytics.dart' as ga;
 import '../../../../../analytics/constants.dart' as analytics_constants;
 import '../../../../../config_specific/import_export/import_export.dart';
-import '../../../../../idg/idg_controller.dart';
 import '../../../../../primitives/auto_dispose.dart';
 import '../../../../../primitives/utils.dart';
 import '../../../../../shared/globals.dart';
+import '../../../memory_discoverable.dart';
 import '../../../primitives/class_name.dart';
 import '../../../primitives/memory_utils.dart';
 import '../../../shared/heap/class_filter.dart';
@@ -78,9 +78,8 @@ class DiffPaneController extends DisposableController {
     _isTakingSnapshot.value = false;
     derived._updateValues();
 
-    final IDGController idgController = globals[IDGController];
-    idgController.log(
-      LogData('mem-snapshot', '', DateTime.now().millisecondsSinceEpoch),
+    eventsManager.addEvent(
+      StructuredLogEvent(DiscoverableMemoryPage.memorySnapshotTaken),
     );
   }
 

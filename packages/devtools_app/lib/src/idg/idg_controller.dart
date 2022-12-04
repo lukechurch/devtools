@@ -7,13 +7,11 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 
-import '../screens/inspector/inspector_service.dart';
+import '../../devtools_app.dart';
 import '../screens/logging/logging_controller.dart';
-import '../shared/globals.dart' as globals;
 import 'idg_core.dart';
 import 'idg_screen.dart';
 import 'idg_server.dart';
-import 'idg_apis.dart' as api;
 
 export '../screens/logging/logging_controller.dart';
 
@@ -24,23 +22,22 @@ const int kMaxLogItemsUpperBound = 5500;
 final DateFormat timeFormat = DateFormat('HH:mm:ss.SSS');
 
 class IDGController {
-  late CommPortListener listener;
-
   IDGController() {
-    api.EventsAPI events =
-        api.EventsAPI(this, globals.messageBus, globals.serviceManager);
     idgEngine = IDGEngine();
     for (var recipe in idgRecipes.keys) {
       idgEngine.addRecipes(recipe, idgRecipes[recipe]!);
     }
+    eventsManager.onEvent().listen(
+      (event) {
+        idgEngine.notifyOfEvent(IDGEvent(event.type, event.data.toString()));
+      },
+    );
     // Log comms port events
     listener = CommPortListener(this, 'vscode');
   }
 
   late IDGEngine idgEngine;
-
-  void log(LogData log) =>
-      idgEngine.notifyOfEvent(IDGEvent(log.kind, log.details!));
+  late CommPortListener listener;
 
   Stream get onEngineUpdated => idgEngine.updatesController.stream;
 

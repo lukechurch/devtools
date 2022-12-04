@@ -1,7 +1,7 @@
 import 'package:http/http.dart' as http;
 
-import '../../screens/performance/performance_screen.dart';
 import '../../shared/globals.dart';
+import '../idg_apis.dart';
 import '../idg_core.dart' as idg_core;
 
 idg_core.Step _s0 = idg_core.Step(
@@ -138,10 +138,10 @@ var _s7 = idg_core.Step(
       idg_core.PresenceSensor('APP_START'.toLowerCase(), 'App started'),
   buttons: [
     idg_core.Action('switch panel', () async {
-      frameworkController.notifyShowPageId(PerformanceScreen.id);
+      discoverableApp.selectPage(DiscoverableMemoryPage.id);
     }),
     idg_core.Action('Select element', () async {
-      frameworkController.selectFrame(4);
+      discoverableApp.performancePage!.selectFrame(4);
     })
   ],
 );

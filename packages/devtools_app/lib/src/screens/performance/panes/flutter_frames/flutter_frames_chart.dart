@@ -102,15 +102,10 @@ class _FlutterFramesChartState extends State<_FlutterFramesChart>
       // Multiply by two to reach two times the target frame time.
       1 / widget.displayRefreshRate * 1000 * 2 / defaultChartHeight;
 
-  late StreamSubscription<int> _frameSelectionSubscription;
-
   @override
   void initState() {
     super.initState();
     _framesScrollController = ScrollController();
-
-    _frameSelectionSubscription =
-        frameworkController.onSelectFrame.listen(selectFrame);
 
     cancelListeners();
     _selectedFrame = widget.framesController.selectedFrame.value;
@@ -125,12 +120,6 @@ class _FlutterFramesChartState extends State<_FlutterFramesChart>
   void didChangeDependencies() {
     super.didChangeDependencies();
     _maybeShowShaderJankMessage();
-  }
-
-  void selectFrame(int index) {
-    widget.framesController.handleSelectedFrame(
-      widget.framesController.flutterFrames.value[index],
-    );
   }
 
   @override
@@ -170,7 +159,6 @@ class _FlutterFramesChartState extends State<_FlutterFramesChart>
   @override
   void dispose() {
     _framesScrollController.dispose();
-    unawaited(_frameSelectionSubscription.cancel());
     super.dispose();
   }
 
