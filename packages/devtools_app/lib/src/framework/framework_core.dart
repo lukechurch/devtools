@@ -7,6 +7,7 @@ import 'dart:async';
 import '../../devtools.dart' as devtools show version;
 import '../config_specific/import_export/import_export.dart';
 import '../config_specific/logger/logger.dart';
+import '../extensibility/discoverable.dart';
 import '../primitives/message_bus.dart';
 import '../primitives/utils.dart';
 import '../screens/debugger/breakpoint_manager.dart';
@@ -39,6 +40,8 @@ class FrameworkCore {
   static void init() {
     // Print the version number at startup.
     log('DevTools version ${devtools.version}.');
+    // Print any discoverable events
+    eventsManager.onEvent().listen((event) => print(event));
   }
 
   /// Returns true if we're able to connect to a device and false otherwise.

@@ -13,6 +13,11 @@ class StructuredLogEvent {
   StructuredLogEvent(this.type, {this.data});
   final String type;
   final Object? data;
+
+  @override
+  String toString() {
+    return '$runtimeType: {type: $type, data: $data}';
+  }
 }
 
 class VMEvent extends StructuredLogEvent {
