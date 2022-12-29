@@ -27,6 +27,8 @@ class FrameworkCore {
     setGlobal(ServiceConnectionManager, ServiceConnectionManager());
     setGlobal(MessageBus, MessageBus());
     setGlobal(FrameworkController, FrameworkController());
+    setGlobal(EventsManager, EventsManager());
+    setGlobal(DiscoverableDevToolsApp, DiscoverableDevToolsApp());
     setGlobal(SurveyService, SurveyService());
     setGlobal(OfflineModeController, OfflineModeController());
     setGlobal(ScriptManager, ScriptManager());
