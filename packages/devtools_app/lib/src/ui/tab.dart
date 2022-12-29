@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 
 import '../analytics/analytics.dart' as ga;
+import '../primitives/auto_dispose_mixin.dart';
 import '../shared/common_widgets.dart';
 import '../shared/theme.dart';
 import '../shared/utils.dart';
@@ -114,13 +115,12 @@ class AnalyticsTabbedView<T> extends StatefulWidget {
 }
 
 class _AnalyticsTabbedViewState extends State<AnalyticsTabbedView>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, AutoDisposeMixin {
   TabController? _tabController;
 
   int _currentTabControllerIndex = 0;
 
   void _initTabController() {
-    _tabController?.removeListener(_onTabChanged);
     _tabController?.dispose();
 
     _tabController = TabController(
@@ -130,11 +130,7 @@ class _AnalyticsTabbedViewState extends State<AnalyticsTabbedView>
     if (_currentTabControllerIndex >= _tabController!.length) {
       _currentTabControllerIndex = 0;
     }
-    _tabController!
-      ..index = _currentTabControllerIndex
-      ..addListener(_onTabChanged);
-
-    widget.selectedTabNotifier?.addListener(_onChangeTab);
+    _tabController!.index = _currentTabControllerIndex;
 
     // Record a selection for the visible tab.
     if (widget.sendAnalytics) {
@@ -200,9 +196,22 @@ class _AnalyticsTabbedViewState extends State<AnalyticsTabbedView>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    addAutoDisposeListener(
+      widget.selectedTabNotifier,
+      _onChangeTab,
+    );
+
+    addAutoDisposeListener(
+      _tabController,
+      _onTabChanged,
+    );
+  }
+
+  @override
   void dispose() {
-    widget.selectedTabNotifier?.removeListener(_onChangeTab);
-    _tabController?.removeListener(_onTabChanged);
     _tabController?.dispose();
     super.dispose();
   }
