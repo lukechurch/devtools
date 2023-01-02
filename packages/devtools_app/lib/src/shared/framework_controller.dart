@@ -4,7 +4,7 @@
 
 import 'dart:async';
 
-import '../extensibility/discoverable.dart';
+import '../primitives/simple_items.dart';
 import 'globals.dart';
 
 /// This controller is used by the connection to the DevTools server to receive
@@ -60,7 +60,7 @@ class FrameworkController {
     _pageChangeController.add(page);
     eventsManager.addEvent(
       StructuredLogEvent(
-        '${DiscoverableDevToolsApp.pageChangedEventKeyPrefix}${page.id}',
+        '${EventIds.pageChangedEventPrefix}${page.id}',
       ),
     );
   }

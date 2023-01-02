@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 
 import '../../analytics/constants.dart' as analytics_constants;
+import '../../primitives/simple_items.dart';
 import '../../shared/common_widgets.dart';
 import '../../ui/tab.dart';
 import 'memory_controller.dart';
@@ -14,26 +15,29 @@ import 'panes/diff/diff_pane.dart';
 import 'panes/leaks/leaks_pane.dart';
 
 class MemoryScreenKeys {
-  static const leaksTab = Key('Leaks Tab');
-  static const dartHeapTableProfileTab = Key('Dart Heap Profile Tab');
+  static const leaksTab = Key(WidgetIds.leaksTab);
+  static const dartHeapTableProfileTab = Key(WidgetIds.dartHeapTableProfileTab);
   static const dartHeapAllocationTracingTab =
-      Key('Dart Heap Allocation Tracing Tab');
-  static const diffTab = Key('Diff Tab');
+      Key(WidgetIds.dartHeapAllocationTracingTab);
+  static const diffTab = Key(WidgetIds.diffTab);
 }
 
-class MemoryTabView extends StatelessWidget {
-  const MemoryTabView(
-    this.controller,
-  );
+class MemoryTabView extends StatefulWidget {
+  const MemoryTabView(this.controller, {super.key});
 
   static const _gaPrefix = 'memoryTab';
 
   final MemoryController controller;
 
   @override
+  State<StatefulWidget> createState() => MemoryTabViewState();
+}
+
+class MemoryTabViewState extends State<MemoryTabView> {
+  @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder(
-      valueListenable: controller.shouldShowLeaksTab,
+      valueListenable: widget.controller.shouldShowLeaksTab,
       builder: (context, showLeaksTab, _) {
         final tabRecords = _generateTabRecords();
         final tabs = <DevToolsTab>[];
@@ -47,7 +51,8 @@ class MemoryTabView extends StatelessWidget {
           tabs: tabs,
           tabViews: tabViews,
           gaScreen: analytics_constants.memory,
-          selectedTabNotifier: controller.currentTab,
+          selectedTabNotifier: widget.controller.currentTab,
+          highlightTabNotifier: widget.controller.highlightTab,
         );
       },
     );
@@ -59,23 +64,23 @@ class MemoryTabView extends StatelessWidget {
         tab: DevToolsTab.create(
           key: MemoryScreenKeys.dartHeapTableProfileTab,
           tabName: 'Profile',
-          gaPrefix: _gaPrefix,
+          gaPrefix: MemoryTabView._gaPrefix,
         ),
         tabView: KeepAliveWrapper(
           child: AllocationProfileTableView(
-            controller: controller.allocationProfileController,
+            controller: widget.controller.allocationProfileController,
           ),
         ),
       ),
       TabRecord(
         tab: DevToolsTab.create(
           key: MemoryScreenKeys.diffTab,
-          gaPrefix: _gaPrefix,
+          gaPrefix: MemoryTabView._gaPrefix,
           tabName: 'Diff',
         ),
         tabView: KeepAliveWrapper(
           child: DiffPane(
-            diffController: controller.diffPaneController,
+            diffController: widget.controller.diffPaneController,
           ),
         ),
       ),
@@ -83,17 +88,17 @@ class MemoryTabView extends StatelessWidget {
         tab: DevToolsTab.create(
           key: MemoryScreenKeys.dartHeapAllocationTracingTab,
           tabName: 'Trace',
-          gaPrefix: _gaPrefix,
+          gaPrefix: MemoryTabView._gaPrefix,
         ),
         tabView: const KeepAliveWrapper(
           child: AllocationProfileTracingView(),
         ),
       ),
-      if (controller.shouldShowLeaksTab.value)
+      if (widget.controller.shouldShowLeaksTab.value)
         TabRecord(
           tab: DevToolsTab.create(
             key: MemoryScreenKeys.leaksTab,
-            gaPrefix: _gaPrefix,
+            gaPrefix: MemoryTabView._gaPrefix,
             tabName: 'Detect Leaks',
           ),
           tabView: const KeepAliveWrapper(child: LeaksPane()),

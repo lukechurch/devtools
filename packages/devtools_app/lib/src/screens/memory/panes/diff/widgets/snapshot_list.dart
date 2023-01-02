@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import '../../../../../analytics/analytics.dart' as ga;
 import '../../../../../analytics/constants.dart' as analytics_constants;
 import '../../../../../primitives/auto_dispose_mixin.dart';
+import '../../../../../primitives/simple_items.dart';
 import '../../../../../shared/common_widgets.dart';
 import '../../../../../shared/table/table.dart';
 import '../../../../../shared/theme.dart';
@@ -55,6 +56,7 @@ class _ListControlPane extends StatelessWidget {
         return Row(
           children: [
             ToolbarAction(
+              key: const Key(WidgetIds.takeSnapshotButton),
               icon: Icons.fiber_manual_record,
               tooltip: 'Take heap snapshot for the selected isolate',
               onPressed: controller.takeSnapshotHandler(
@@ -62,6 +64,7 @@ class _ListControlPane extends StatelessWidget {
               ),
             ),
             ToolbarAction(
+              key: const Key(WidgetIds.clearSnapshotsButton),
               icon: Icons.block,
               tooltip: 'Clear all snapshots',
               onPressed: clearAllEnabled

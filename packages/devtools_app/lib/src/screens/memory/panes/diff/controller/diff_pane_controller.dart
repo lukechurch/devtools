@@ -12,9 +12,9 @@ import '../../../../../analytics/analytics.dart' as ga;
 import '../../../../../analytics/constants.dart' as analytics_constants;
 import '../../../../../config_specific/import_export/import_export.dart';
 import '../../../../../primitives/auto_dispose.dart';
+import '../../../../../primitives/simple_items.dart';
 import '../../../../../primitives/utils.dart';
 import '../../../../../shared/globals.dart';
-import '../../../memory_controller_discoverable.dart';
 import '../../../primitives/class_name.dart';
 import '../../../primitives/memory_utils.dart';
 import '../../../shared/heap/class_filter.dart';
@@ -79,7 +79,7 @@ class DiffPaneController extends DisposableController {
     derived._updateValues();
 
     eventsManager.addEvent(
-      StructuredLogEvent(DiscoverableMemoryPage.memorySnapshotTaken),
+      StructuredLogEvent(EventIds.memorySnapshotTakenEvent),
     );
   }
 

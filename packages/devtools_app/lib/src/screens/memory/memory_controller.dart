@@ -71,6 +71,8 @@ class MemoryController extends DisposableController
   final ValueNotifier<Key> currentTab =
       ValueNotifier(MemoryScreenKeys.dartHeapTableProfileTab);
 
+  final ValueNotifier<Key?> highlightTab = ValueNotifier(null);
+
   /// The controller is late to enable test injection.
   late final DiffPaneController diffPaneController;
 

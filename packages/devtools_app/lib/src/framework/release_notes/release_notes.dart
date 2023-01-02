@@ -13,14 +13,13 @@ import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 
 import '../../../devtools.dart' as devtools;
+import '../../../devtools_app.dart';
 import '../../config_specific/launch_url/launch_url.dart';
 import '../../config_specific/logger/logger.dart' as logger;
 import '../../config_specific/server/server.dart' as server;
-import '../../primitives/auto_dispose_mixin.dart';
-import '../../shared/common_widgets.dart';
-import '../../shared/theme.dart';
+import '../../primitives/simple_items.dart';
 
-const debugTestReleaseNotes = false;
+const debugTestReleaseNotes = true;
 
 class ReleaseNotesViewer extends StatefulWidget {
   const ReleaseNotesViewer({
@@ -166,8 +165,13 @@ class ReleaseNotes extends AnimatedWidget {
                 : Expanded(
                     child: Markdown(
                       data: markdownData!,
-                      onTapLink: (_, href, __) =>
-                          unawaited(launchUrl(href!, context)),
+                      onTapLink: (_, href, __) {
+                        if (href!.startsWith(internalUriScheme)) {
+                          unawaited(discoverableApp.handleActionPath(href));
+                          return;
+                        }
+                        unawaited(launchUrl(href, context));
+                      },
                     ),
                   ),
           ],
@@ -254,6 +258,19 @@ class ReleaseNotesController {
           _unsupportedPathSyntax,
           _flutterDocsSite,
         );
+
+        // TODO: this is just to test & demonstrate the internal link format
+        releaseNotesMarkdown = releaseNotesMarkdown.replaceAll(
+          'Memory tab")\n\n',
+          'Memory tab")\n\n Try it yourself:\n'
+              '  - Connect to a running app\n'
+              '  - [Switch to the new diff tab](devtools://memory/Diff%20Tab?action=select,highlight)\n'
+              '  - [Find the snapshot button](devtools://memory/memory_screen_take_snapshot_button?action=highlight) and take a snapshot\n'
+              '  - Do something in your app, then take another snapshot\n'
+              '  - Compare the two snapshots\n\n',
+        );
+
+        print(releaseNotesMarkdown);
 
         _releaseNotesMarkdown.value = releaseNotesMarkdown;
         toggleReleaseNotesVisible(true);

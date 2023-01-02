@@ -47,9 +47,11 @@ class DevToolsTab extends Tab {
       key: key ?? ValueKey<String>(tabName),
       gaId: '${gaPrefix}_$tabName',
       trailing: trailing,
-      child: Text(
-        tabName,
-        overflow: TextOverflow.ellipsis,
+      child: HighlightableWrapper(
+        child: Text(
+          tabName,
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
     );
   }
@@ -84,6 +86,7 @@ class AnalyticsTabbedView<T> extends StatefulWidget {
     this.sendAnalytics = true,
     this.onTabChanged,
     this.selectedTabNotifier,
+    this.highlightTabNotifier,
   })  : trailingWidgets = List.generate(
           tabs.length,
           (index) => tabs[index].trailing ?? const SizedBox(),
@@ -109,6 +112,8 @@ class AnalyticsTabbedView<T> extends StatefulWidget {
   final void Function(int)? onTabChanged;
 
   final ValueNotifier<Key>? selectedTabNotifier;
+
+  final ValueNotifier<Key?>? highlightTabNotifier;
 
   @override
   _AnalyticsTabbedViewState createState() => _AnalyticsTabbedViewState();
@@ -180,6 +185,17 @@ class _AnalyticsTabbedViewState extends State<AnalyticsTabbedView>
     return widget.tabs[tabIndex].key;
   }
 
+  void _onHighlightTab() {
+    if (widget.highlightTabNotifier == null ||
+        widget.highlightTabNotifier!.value == null) return;
+    final key = widget.highlightTabNotifier!.value;
+    if (_tabKeyToTabIndex(key!) == -1) return;
+    final tab =
+        widget.tabs[_tabKeyToTabIndex(key)].child as HighlightableWrapper;
+    tab.toggleIsHighlighted(true);
+    widget.highlightTabNotifier!.value = null;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -202,6 +218,11 @@ class _AnalyticsTabbedViewState extends State<AnalyticsTabbedView>
     addAutoDisposeListener(
       widget.selectedTabNotifier,
       _onChangeTab,
+    );
+
+    addAutoDisposeListener(
+      widget.highlightTabNotifier,
+      _onHighlightTab,
     );
 
     addAutoDisposeListener(

@@ -15,6 +15,7 @@ import '../analytics/analytics.dart' as ga;
 import '../config_specific/launch_url/launch_url.dart';
 import '../primitives/auto_dispose_mixin.dart';
 import '../primitives/flutter_widgets/linked_scroll_controller.dart';
+import '../primitives/highlightable_mixin.dart';
 import '../primitives/utils.dart';
 import '../screens/debugger/debugger_controller.dart';
 import '../screens/debugger/variables.dart';
@@ -384,7 +385,7 @@ class RefreshButton extends IconLabelButton {
 
 /// A Refresh ToolbarAction button.
 class ToolbarRefresh extends ToolbarAction {
-  const ToolbarRefresh({
+  ToolbarRefresh({
     super.icon = Icons.refresh,
     required super.onPressed,
     super.tooltip = 'Refresh',
@@ -857,15 +858,17 @@ class DevToolsIconButton extends StatelessWidget {
 
 /// A wrapper around a TextButton, an Icon, and an optional Tooltip; used for
 /// small toolbar actions.
-class ToolbarAction extends StatelessWidget {
-  const ToolbarAction({
+class ToolbarAction extends StatefulWidget with HighlightableMixin {
+  ToolbarAction({
     required this.icon,
     required this.onPressed,
     this.tooltip,
     Key? key,
     this.size,
     this.style,
-  }) : super(key: key);
+  }) : super(key: key) {
+    initHighlightable();
+  }
 
   final TextStyle? style;
   final IconData icon;
@@ -874,27 +877,91 @@ class ToolbarAction extends StatelessWidget {
   final double? size;
 
   @override
+  State<StatefulWidget> createState() => _ToolbarActionState();
+}
+
+class _ToolbarActionState extends State<ToolbarAction>
+    with
+        HighlightableStateMixin,
+        SingleTickerProviderStateMixin,
+        AutoDisposeMixin {
+  @override
+  void initState() {
+    initHighlightableState();
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final button = TextButton(
       style: TextButton.styleFrom(
         padding: EdgeInsets.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        textStyle: style,
+        textStyle: widget.isHighlighted.value
+            ? (widget.style ?? DefaultTextStyle.of(context).style)
+                .copyWith(color: animation.value)
+            : widget.style,
       ),
-      onPressed: onPressed,
+      onPressed: widget.onPressed,
       child: Icon(
-        icon,
-        size: size ?? actionsIconSize,
-        color: style?.color,
+        widget.icon,
+        size: widget.size ?? actionsIconSize,
+        color:
+            widget.isHighlighted.value ? animation.value : widget.style?.color,
       ),
     );
 
-    return tooltip == null
+    return widget.tooltip == null
         ? button
         : DevToolsTooltip(
-            message: tooltip,
+            message: widget.tooltip,
             child: button,
           );
+  }
+
+  @override
+  void dispose() {
+    disposeHighlightableState();
+    super.dispose();
+  }
+}
+
+class HighlightableWrapper extends StatefulWidget with HighlightableMixin {
+  HighlightableWrapper({super.key, required this.child}) {
+    initHighlightable();
+  }
+
+  final Widget child;
+
+  @override
+  State<StatefulWidget> createState() => HighlightableWrapperState();
+}
+
+class HighlightableWrapperState extends State<HighlightableWrapper>
+    with
+        HighlightableStateMixin,
+        SingleTickerProviderStateMixin,
+        AutoDisposeMixin {
+  @override
+  void initState() {
+    initHighlightableState();
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTextStyle(
+      style: widget.isHighlighted.value
+          ? DefaultTextStyle.of(context).style.copyWith(color: animation.value)
+          : DefaultTextStyle.of(context).style,
+      child: widget.child,
+    );
+  }
+
+  @override
+  void dispose() {
+    disposeHighlightableState();
+    super.dispose();
   }
 }
 
