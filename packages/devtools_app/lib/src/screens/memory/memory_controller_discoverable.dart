@@ -48,11 +48,9 @@ class DiscoverableMemoryPage extends DiscoverablePage {
       StructuredLogEvent(EventIds.highlightElementEvent, data: {'key': key}),
     );
     if (discoverableApp.highlightableElements.keys.contains(Key(key))) {
-      discoverableApp
-          .highlightableElements[const Key(WidgetIds.takeSnapshotButton)]
+      discoverableApp.highlightableElements[Key(key)]
           ?.toggleIsHighlighted(true);
       return;
     }
-    controller.highlightTab.value = Key(key);
   }
 }

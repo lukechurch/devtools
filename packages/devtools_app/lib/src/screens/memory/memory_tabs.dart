@@ -52,7 +52,6 @@ class MemoryTabViewState extends State<MemoryTabView> {
           tabViews: tabViews,
           gaScreen: analytics_constants.memory,
           selectedTabNotifier: widget.controller.currentTab,
-          highlightTabNotifier: widget.controller.highlightTab,
         );
       },
     );
