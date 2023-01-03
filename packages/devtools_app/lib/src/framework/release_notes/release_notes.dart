@@ -17,7 +17,9 @@ import '../../shared/common_widgets.dart';
 import '../../shared/config_specific/launch_url/launch_url.dart';
 import '../../shared/config_specific/logger/logger.dart' as logger;
 import '../../shared/config_specific/server/server.dart' as server;
+import '../../shared/globals.dart';
 import '../../shared/primitives/auto_dispose.dart';
+import '../../shared/primitives/simple_items.dart';
 import '../../shared/theme.dart';
 
 const debugTestReleaseNotes = false;
@@ -166,7 +168,13 @@ class ReleaseNotes extends AnimatedWidget {
                 : Expanded(
                     child: Markdown(
                       data: markdownData!,
-                      onTapLink: (_, href, __) => unawaited(launchUrl(href!)),
+                      onTapLink: (_, href, __) {
+                        if (href!.startsWith(internalUriScheme)) {
+                          unawaited(discoverableApp.handleActionPath(href));
+                          return;
+                        }
+                        unawaited(launchUrl(href));
+                      },
                     ),
                   ),
           ],
@@ -252,6 +260,17 @@ class ReleaseNotesController {
         releaseNotesMarkdown = releaseNotesMarkdown.replaceAll(
           _unsupportedPathSyntax,
           _flutterDocsSite,
+        );
+
+        // TODO: this is just to test & demonstrate the internal link format
+        releaseNotesMarkdown = releaseNotesMarkdown.replaceAll(
+          'Memory tab")\n\n',
+          'Memory tab")\n\n Try it yourself:\n'
+              '  - Connect to a running app\n'
+              '  - [Switch to the new diff tab](devtools://memory/Diff%20Tab?action=select,highlight)\n'
+              '  - [Find the snapshot button](devtools://memory/memory_screen_take_snapshot_button?action=highlight) and take a snapshot\n'
+              '  - Do something in your app, then take another snapshot\n'
+              '  - Compare the two snapshots\n\n',
         );
 
         _releaseNotesMarkdown.value = releaseNotesMarkdown;

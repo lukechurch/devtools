@@ -11,7 +11,9 @@ import 'package:flutter/foundation.dart';
 import '../../../../../shared/analytics/analytics.dart' as ga;
 import '../../../../../shared/analytics/constants.dart' as gac;
 import '../../../../../shared/config_specific/import_export/import_export.dart';
+import '../../../../../shared/globals.dart';
 import '../../../../../shared/primitives/auto_dispose.dart';
+import '../../../../../shared/primitives/simple_items.dart';
 import '../../../../../shared/primitives/utils.dart';
 import '../../../shared/heap/class_filter.dart';
 import '../../../shared/heap/heap.dart';
@@ -75,6 +77,10 @@ class DiffPaneController extends DisposableController {
     core._selectedSnapshotIndex.value = newElementIndex;
     _isTakingSnapshot.value = false;
     derived._updateValues();
+
+    eventsManager.addEvent(
+      StructuredLogEvent(EventIds.memorySnapshotTakenEvent),
+    );
   }
 
   void clearSnapshots() {

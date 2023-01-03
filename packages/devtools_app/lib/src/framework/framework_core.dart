@@ -5,6 +5,7 @@
 import 'dart:async';
 
 import '../../devtools.dart' as devtools show version;
+import '../extensibility/discoverable.dart';
 import '../screens/debugger/breakpoint_manager.dart';
 import '../service/service.dart';
 import '../service/service_manager.dart';
@@ -28,6 +29,8 @@ class FrameworkCore {
     setGlobal(ServiceConnectionManager, ServiceConnectionManager());
     setGlobal(MessageBus, MessageBus());
     setGlobal(FrameworkController, FrameworkController());
+    setGlobal(EventsManager, EventsManager());
+    setGlobal(DiscoverableDevToolsApp, DiscoverableDevToolsApp());
     setGlobal(SurveyService, SurveyService());
     setGlobal(OfflineModeController, OfflineModeController());
     setGlobal(ScriptManager, ScriptManager());
@@ -38,6 +41,8 @@ class FrameworkCore {
   static void init() {
     // Print the version number at startup.
     log('DevTools version ${devtools.version}.');
+    // Print any discoverable events
+    eventsManager.onEvent().listen((event) => print(event));
   }
 
   /// Returns true if we're able to connect to a device and false otherwise.

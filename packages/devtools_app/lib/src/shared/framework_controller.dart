@@ -5,6 +5,7 @@
 import 'dart:async';
 
 import 'globals.dart';
+import 'primitives/simple_items.dart';
 
 /// This controller is used by the connection to the DevTools server to receive
 /// commands from the server, and to notify the server of DevTools state changes
@@ -57,6 +58,11 @@ class FrameworkController {
   /// Notify the controller that the current page has changed.
   void notifyPageChange(PageChangeEvent page) {
     _pageChangeController.add(page);
+    eventsManager.addEvent(
+      StructuredLogEvent(
+        '${EventIds.pageChangedEventPrefix}${page.id}',
+      ),
+    );
   }
 
   /// Notifies when a device disconnects from DevTools.

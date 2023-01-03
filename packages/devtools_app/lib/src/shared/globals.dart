@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import '../extensibility/discoverable.dart';
 import '../extension_points/extensions_base.dart';
 import '../screens/debugger/breakpoint_manager.dart';
 import '../service/service_manager.dart';
@@ -14,6 +15,9 @@ import 'primitives/message_bus.dart';
 import 'primitives/storage.dart';
 import 'scripts/script_manager.dart';
 import 'survey.dart';
+
+export '../extensibility/discoverable.dart'
+    show StructuredLogEvent, DevToolsUserEvent, VMEvent;
 
 /// Whether this DevTools build is external.
 bool get isExternalBuild => _isExternalBuild;
@@ -31,6 +35,11 @@ MessageBus get messageBus => globals[MessageBus] as MessageBus;
 
 FrameworkController get frameworkController =>
     globals[FrameworkController] as FrameworkController;
+
+EventsManager get eventsManager => globals[EventsManager] as EventsManager;
+
+DiscoverableDevToolsApp get discoverableApp =>
+    globals[DiscoverableDevToolsApp] as DiscoverableDevToolsApp;
 
 Storage get storage => globals[Storage] as Storage;
 

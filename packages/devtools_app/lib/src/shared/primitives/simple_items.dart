@@ -46,3 +46,44 @@ enum ScreenMetaData {
 }
 
 const String traceEventsFieldName = 'traceEvents';
+
+const String internalUriScheme = 'devtools';
+const String internalUriActionQueryKey = 'action';
+
+class WidgetIds {
+  WidgetIds._();
+
+  // Elements associated with the memory screen
+  static const leaksTab = 'Leaks Tab';
+  static const dartHeapTableProfileTab = 'Dart Heap Profile Tab';
+  static const dartHeapAllocationTracingTab =
+      'Dart Heap Allocation Tracing Tab';
+  static const diffTab = 'Diff Tab';
+
+  static const takeSnapshotButton = 'memory_screen_take_snapshot_button';
+  static const clearSnapshotsButton = 'memory_screen_clear_snapshots_button';
+}
+
+class EventIds {
+  EventIds._();
+
+  // Generic events
+  static const selectElementEvent = 'select-element';
+  static const highlightElementEvent = 'highlight-element';
+
+  static const pageChangedEventPrefix = 'page-changed.';
+
+  // Events triggered by elements on the memory screen
+  static const memorySnapshotTakenEvent = 'mem-snapshot-done';
+}
+
+class ActionIds {
+  ActionIds._();
+
+  // Generic actions
+  static const selectElementAction = 'select';
+  static const highlightElementAction = 'highlight';
+
+  // Actions associated with the memory screen
+  static const takeMemorySnapshotAction = 'take-mem-snapshot';
+}

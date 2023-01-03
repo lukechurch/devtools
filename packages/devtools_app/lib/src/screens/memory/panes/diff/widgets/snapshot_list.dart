@@ -10,6 +10,7 @@ import '../../../../../shared/analytics/analytics.dart' as ga;
 import '../../../../../shared/analytics/constants.dart' as gac;
 import '../../../../../shared/common_widgets.dart';
 import '../../../../../shared/primitives/auto_dispose.dart';
+import '../../../../../shared/primitives/simple_items.dart';
 import '../../../../../shared/primitives/utils.dart';
 import '../../../../../shared/table/table.dart';
 import '../../../../../shared/theme.dart';
@@ -56,6 +57,7 @@ class _ListControlPane extends StatelessWidget {
         return Row(
           children: [
             ToolbarAction(
+              key: const Key(WidgetIds.takeSnapshotButton),
               icon: Icons.fiber_manual_record,
               tooltip: 'Take heap snapshot for the selected isolate',
               onPressed: controller.takeSnapshotHandler(
@@ -63,6 +65,7 @@ class _ListControlPane extends StatelessWidget {
               ),
             ),
             ToolbarAction(
+              key: const Key(WidgetIds.clearSnapshotsButton),
               icon: Icons.block,
               tooltip: 'Clear all snapshots',
               onPressed: clearAllEnabled
