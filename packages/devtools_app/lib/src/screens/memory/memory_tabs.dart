@@ -51,6 +51,7 @@ class MemoryTabViewState extends State<MemoryTabView> {
           tabViews: tabViews,
           initialSelectedIndex: widget.controller.selectedFeatureTabIndex,
           gaScreen: gac.memory,
+          selectedTabNotifier: widget.controller.currentTab,
           onTabChanged: (int index) {
             widget.controller.selectedFeatureTabIndex = index;
           },
