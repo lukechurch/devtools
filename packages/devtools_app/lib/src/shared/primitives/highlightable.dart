@@ -47,7 +47,7 @@ mixin HighlightableStateMixin<T extends StatefulWidget> on State<T>
     );
     animation = ColorTween(
       begin: Colors.white,
-      end: Colors.blue,
+      end: Colors.red,
     ).animate(curve);
     animation.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
