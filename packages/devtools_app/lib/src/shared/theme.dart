@@ -4,6 +4,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../../devtools_app.dart';
 import 'common_widgets.dart';
 import 'config_specific/ide_theme/ide_theme.dart';
 import 'ui/colors.dart';
@@ -609,6 +610,7 @@ bool includeText(
 ) {
   return minScreenWidthForTextBeforeScaling == null ||
       MediaQuery.of(context).size.width >
+          // MediaQuery.of(context).size.width - userToursController.width.value >
           scaleByFontFactor(minScreenWidthForTextBeforeScaling);
 }
 

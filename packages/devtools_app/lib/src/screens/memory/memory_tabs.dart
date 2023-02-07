@@ -6,21 +6,13 @@ import 'package:flutter/material.dart';
 
 import '../../shared/analytics/constants.dart' as gac;
 import '../../shared/common_widgets.dart';
+import '../../shared/primitives/simple_items.dart';
 import '../../shared/ui/tab.dart';
 import 'memory_controller.dart';
 import 'panes/diff/diff_pane.dart';
 import 'panes/leaks/leaks_pane.dart';
 import 'panes/profile/profile_view.dart';
 import 'panes/tracing/tracing_view.dart';
-
-@visibleForTesting
-class MemoryScreenKeys {
-  static const leaksTab = Key('Leaks Tab');
-  static const dartHeapTableProfileTab = Key('Dart Heap Profile Tab');
-  static const dartHeapAllocationTracingTab =
-      Key('Dart Heap Allocation Tracing Tab');
-  static const diffTab = Key('Diff Tab');
-}
 
 class MemoryTabView extends StatelessWidget {
   const MemoryTabView(
@@ -48,6 +40,7 @@ class MemoryTabView extends StatelessWidget {
           tabViews: tabViews,
           initialSelectedIndex: controller.selectedFeatureTabIndex,
           gaScreen: gac.memory,
+          selectedTabNotifier: controller.currentTab,
           onTabChanged: (int index) {
             controller.selectedFeatureTabIndex = index;
           },
@@ -60,7 +53,7 @@ class MemoryTabView extends StatelessWidget {
     return [
       TabRecord(
         tab: DevToolsTab.create(
-          key: MemoryScreenKeys.dartHeapTableProfileTab,
+          key: Key(WidgetKeys.dartHeapTableProfileTab.id),
           tabName: 'Profile Memory',
           gaPrefix: _gaPrefix,
         ),
@@ -72,7 +65,7 @@ class MemoryTabView extends StatelessWidget {
       ),
       TabRecord(
         tab: DevToolsTab.create(
-          key: MemoryScreenKeys.diffTab,
+          key: Key(WidgetKeys.diffTab.id),
           gaPrefix: _gaPrefix,
           tabName: 'Diff Snapshots',
         ),
@@ -84,7 +77,7 @@ class MemoryTabView extends StatelessWidget {
       ),
       TabRecord(
         tab: DevToolsTab.create(
-          key: MemoryScreenKeys.dartHeapAllocationTracingTab,
+          key: Key(WidgetKeys.dartHeapAllocationTracingTab.id),
           tabName: 'Trace Instances',
           gaPrefix: _gaPrefix,
         ),
@@ -95,7 +88,7 @@ class MemoryTabView extends StatelessWidget {
       if (controller.shouldShowLeaksTab.value)
         TabRecord(
           tab: DevToolsTab.create(
-            key: MemoryScreenKeys.leaksTab,
+            key: Key(WidgetKeys.leaksTab.id),
             gaPrefix: _gaPrefix,
             tabName: 'Detect Leaks',
           ),

@@ -181,12 +181,13 @@ Widget _buildAlternatingRow(BuildContext context, int index, Widget row) {
 
 /// An IconLabelButton with label 'Request' and a 'call made' icon.
 class RequestDataButton extends IconLabelButton {
-  const RequestDataButton({
+  RequestDataButton({
+    Key? key,
     required super.onPressed,
     super.icon = Icons.call_made,
     super.label = 'Request',
     super.outlined = false,
-  });
+  }) : super(key: key);
 }
 
 /// Displays a RequestDataButton if the data provided by [sizeProvider] is null,

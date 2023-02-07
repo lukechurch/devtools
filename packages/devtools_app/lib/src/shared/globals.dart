@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import '../discoverable_facade/discoverable_devtools.dart';
 import '../extension_points/extensions_base.dart';
+import '../framework/user_tours/user_tours.dart';
 import '../screens/debugger/breakpoint_manager.dart';
 import '../service/service_manager.dart';
 import '../shared/notifications.dart';
@@ -32,6 +34,14 @@ MessageBus get messageBus => globals[MessageBus] as MessageBus;
 
 FrameworkController get frameworkController =>
     globals[FrameworkController] as FrameworkController;
+
+EventsManager get eventsManager => globals[EventsManager] as EventsManager;
+
+DiscoverableDevToolsApp get discoverableApp =>
+    globals[DiscoverableDevToolsApp] as DiscoverableDevToolsApp;
+
+UserToursController get userToursController =>
+    globals[UserToursController] as UserToursController;
 
 Storage get storage => globals[Storage] as Storage;
 

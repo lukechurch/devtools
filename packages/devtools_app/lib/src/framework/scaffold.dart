@@ -27,6 +27,7 @@ import '../shared/theme.dart';
 import '../shared/title.dart';
 import '../shared/utils.dart';
 import 'status_line.dart';
+import 'user_tours/user_tours.dart';
 
 /// Scaffolding for a screen and navigation in the DevTools App.
 ///
@@ -344,22 +345,24 @@ class DevToolsScaffoldState extends State<DevToolsScaffold>
                       :
                       // ignore: avoid-returning-widgets as that would make code more verbose for no clear benefit in this case.
                       _buildAppBar(scaffoldTitle),
-                  body: showConsole
-                      ? Split(
-                          axis: Axis.vertical,
-                          splitters: [
-                            ConsolePaneHeader(),
-                          ],
-                          initialFractions: const [0.8, 0.2],
-                          children: [
-                            content,
-                            Padding(
-                              padding: DevToolsScaffold.horizontalPadding,
-                              child: const ConsolePane(),
-                            ),
-                          ],
-                        )
-                      : content,
+                  body: UserToursViewer(
+                    child: showConsole
+                        ? Split(
+                            axis: Axis.vertical,
+                            splitters: [
+                              ConsolePaneHeader(),
+                            ],
+                            initialFractions: const [0.8, 0.2],
+                            children: [
+                              content,
+                              Padding(
+                                padding: DevToolsScaffold.horizontalPadding,
+                                child: const ConsolePane(),
+                              ),
+                            ],
+                          )
+                        : content,
+                  ),
                   bottomNavigationBar: StatusLine(
                     currentScreen: _currentScreen,
                     isEmbedded: widget.embed,

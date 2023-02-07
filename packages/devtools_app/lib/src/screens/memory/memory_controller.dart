@@ -17,7 +17,9 @@ import '../../shared/config_specific/file/file.dart';
 import '../../shared/config_specific/logger/logger.dart';
 import '../../shared/globals.dart';
 import '../../shared/primitives/auto_dispose.dart';
+import '../../shared/primitives/simple_items.dart';
 import '../../shared/utils.dart';
+import 'memory_discoverable_facade.dart';
 import 'memory_protocol.dart';
 import 'panes/chart/primitives.dart';
 import 'panes/diff/controller/diff_pane_controller.dart';
@@ -75,6 +77,7 @@ class MemoryFeatureControllers {
 class MemoryController extends DisposableController
     with AutoDisposeControllerMixin {
   MemoryController({DiffPaneController? diffPaneController}) {
+    MemoryDiscoverableFacade(this);
     memoryTimeline = MemoryTimeline();
     memoryLog = _MemoryLog(this);
 
@@ -91,6 +94,9 @@ class MemoryController extends DisposableController
   /// DevTools screen changes, so we must store this value in the controller
   /// instead of the widget state.
   int selectedFeatureTabIndex = 0;
+
+  final ValueNotifier<Key> currentTab =
+      ValueNotifier(Key(WidgetKeys.dartHeapAllocationTracingTab.id));
 
   static const logFilenamePrefix = 'memory_log_';
 

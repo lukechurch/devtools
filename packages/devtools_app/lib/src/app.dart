@@ -17,6 +17,8 @@ import 'framework/notifications_view.dart';
 import 'framework/release_notes/release_notes.dart';
 import 'framework/report_feedback_button.dart';
 import 'framework/scaffold.dart';
+import 'framework/user_tours.dart';
+import 'framework/user_tours/user_tours.dart';
 import 'screens/app_size/app_size_controller.dart';
 import 'screens/app_size/app_size_screen.dart';
 import 'screens/debugger/debugger_controller.dart';
@@ -97,6 +99,8 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
   bool _denseModeEnabled = false;
 
   final hoverCardController = HoverCardController();
+
+  final devToolsTourController = UserToursController();
 
   late ReleaseNotesController releaseNotesController;
 
@@ -253,6 +257,9 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
                   OpenSettingsAction(),
                   ReportFeedbackButton(),
                   OpenAboutAction(),
+                  if (serviceManager.connectedApp!.isFlutterAppNow!) ...[
+                    OpenAppToursAction(),
+                  ],
                 ],
               ),
             );
@@ -342,6 +349,9 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
             ),
             Provider<ReleaseNotesController>.value(
               value: releaseNotesController,
+            ),
+            Provider<UserToursController>.value(
+              value: userToursController,
             ),
           ],
           child: NotificationsView(

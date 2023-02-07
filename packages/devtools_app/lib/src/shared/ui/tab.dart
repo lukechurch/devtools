@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../analytics/analytics.dart' as ga;
 import '../common_widgets.dart';
+import '../primitives/auto_dispose.dart';
 import '../theme.dart';
 import '../utils.dart';
 
@@ -46,9 +47,12 @@ class DevToolsTab extends Tab {
       key: key ?? ValueKey<String>(tabName),
       gaId: '${gaPrefix}_$tabName',
       trailing: trailing,
-      child: Text(
-        tabName,
-        overflow: TextOverflow.ellipsis,
+      child: HighlightableWrapper(
+        key: key ?? ValueKey<String>(tabName),
+        child: Text(
+          tabName,
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
     );
   }
@@ -81,6 +85,7 @@ class AnalyticsTabbedView<T> extends StatefulWidget {
     this.sendAnalytics = true,
     this.onTabChanged,
     this.initialSelectedIndex,
+    this.selectedTabNotifier,
   })  : trailingWidgets = List.generate(
           tabs.length,
           (index) => tabs[index].trailing ?? const SizedBox(),
@@ -107,18 +112,19 @@ class AnalyticsTabbedView<T> extends StatefulWidget {
 
   final void Function(int)? onTabChanged;
 
+  final ValueNotifier<Key>? selectedTabNotifier;
+
   @override
   _AnalyticsTabbedViewState createState() => _AnalyticsTabbedViewState();
 }
 
 class _AnalyticsTabbedViewState extends State<AnalyticsTabbedView>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, AutoDisposeMixin {
   TabController? _tabController;
 
   int _currentTabControllerIndex = 0;
 
   void _initTabController() {
-    _tabController?.removeListener(_onTabChanged);
     _tabController?.dispose();
 
     _tabController = TabController(
@@ -133,9 +139,7 @@ class _AnalyticsTabbedViewState extends State<AnalyticsTabbedView>
     if (_currentTabControllerIndex >= _tabController!.length) {
       _currentTabControllerIndex = 0;
     }
-    _tabController!
-      ..index = _currentTabControllerIndex
-      ..addListener(_onTabChanged);
+    _tabController!.index = _currentTabControllerIndex;
 
     // Record a selection for the visible tab.
     if (widget.sendAnalytics) {
@@ -152,6 +156,8 @@ class _AnalyticsTabbedViewState extends State<AnalyticsTabbedView>
     if (_currentTabControllerIndex != newIndex) {
       setState(() {
         _currentTabControllerIndex = newIndex;
+        widget.selectedTabNotifier?.value =
+            _tabIndexToTabKey(_currentTabControllerIndex)!;
         widget.onTabChanged?.call(newIndex);
       });
       if (widget.sendAnalytics) {
@@ -161,6 +167,26 @@ class _AnalyticsTabbedViewState extends State<AnalyticsTabbedView>
         );
       }
     }
+  }
+
+  void _onChangeTab() {
+    if (widget.selectedTabNotifier == null) return;
+    _currentTabControllerIndex =
+        _tabKeyToTabIndex(widget.selectedTabNotifier!.value);
+    _tabController?.animateTo(
+      _currentTabControllerIndex,
+      duration: const Duration(),
+    );
+  }
+
+  int _tabKeyToTabIndex(Key tabKey) {
+    final tabIndex = widget.tabs.indexWhere((tab) => tab.key == tabKey);
+    if (tabIndex == -1) print('Unable to find tab with key $tabKey');
+    return tabIndex;
+  }
+
+  Key? _tabIndexToTabKey(int tabIndex) {
+    return widget.tabs[tabIndex].key;
   }
 
   @override
@@ -179,8 +205,22 @@ class _AnalyticsTabbedViewState extends State<AnalyticsTabbedView>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    addAutoDisposeListener(
+      widget.selectedTabNotifier,
+      _onChangeTab,
+    );
+
+    addAutoDisposeListener(
+      _tabController,
+      _onTabChanged,
+    );
+  }
+
+  @override
   void dispose() {
-    _tabController?.removeListener(_onTabChanged);
     _tabController?.dispose();
     super.dispose();
   }

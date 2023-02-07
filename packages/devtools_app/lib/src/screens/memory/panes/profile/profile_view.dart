@@ -10,6 +10,7 @@ import '../../../../shared/analytics/constants.dart' as gac;
 import '../../../../shared/common_widgets.dart';
 import '../../../../shared/globals.dart';
 import '../../../../shared/primitives/utils.dart';
+import '../../../../shared/primitives/simple_items.dart';
 import '../../../../shared/table/table.dart';
 import '../../../../shared/table/table_controller.dart';
 import '../../../../shared/table/table_data.dart';
@@ -641,6 +642,7 @@ class _RefreshOnGCToggleButton extends StatelessWidget {
       valueListenable: allocationProfileController.refreshOnGc,
       builder: (context, refreshOnGc, _) {
         return ToggleButton(
+          key: Key(WidgetKeys.refreshOnGcButton.id),
           message: 'Auto-refresh on garbage collection',
           label: 'Refresh on GC',
           icon: Icons.autorenew_outlined,

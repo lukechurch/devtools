@@ -5,6 +5,7 @@
 import 'dart:async';
 
 import '../../devtools.dart' as devtools show version;
+import '../discoverable_facade/discoverable_devtools.dart';
 import '../screens/debugger/breakpoint_manager.dart';
 import '../service/service.dart';
 import '../service/service_manager.dart';
@@ -19,6 +20,7 @@ import '../shared/primitives/message_bus.dart';
 import '../shared/primitives/utils.dart';
 import '../shared/scripts/script_manager.dart';
 import '../shared/survey.dart';
+import 'user_tours/user_tours.dart';
 
 typedef ErrorReporter = void Function(String title, Object error);
 
@@ -29,6 +31,9 @@ class FrameworkCore {
     setGlobal(ServiceConnectionManager, ServiceConnectionManager());
     setGlobal(MessageBus, MessageBus());
     setGlobal(FrameworkController, FrameworkController());
+    setGlobal(EventsManager, EventsManager());
+    setGlobal(DiscoverableDevToolsApp, DiscoverableDevToolsApp());
+    setGlobal(UserToursController, UserToursController());
     setGlobal(SurveyService, SurveyService());
     setGlobal(OfflineModeController, OfflineModeController());
     setGlobal(ScriptManager, ScriptManager());
@@ -40,6 +45,8 @@ class FrameworkCore {
   static void init() {
     // Print the version number at startup.
     log('DevTools version ${devtools.version}.');
+    // Print any discoverable events
+    eventsManager.onEvent().listen((event) => print(event));
   }
 
   /// Returns true if we're able to connect to a device and false otherwise.

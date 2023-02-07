@@ -46,3 +46,53 @@ enum ScreenMetaData {
 }
 
 const String traceEventsFieldName = 'traceEvents';
+
+const String internalUriScheme = 'devtools';
+const String internalUriActionQueryKey = 'action';
+
+enum WidgetKeys {
+  // Memory screen tabs
+  leaksTab('Leaks Tab'),
+  dartHeapTableProfileTab('Dart Heap Profile Tab'),
+  dartHeapAllocationTracingTab('Dart Heap Allocation Tracing Tab'),
+  diffTab('Diff Tab'),
+
+  // Memory screen buttons
+  toggleMemoryChartButton('toggle_memory_chart_button'),
+  toggleMemoryChartLegendButton('toggle_memory_chart_legend_button'),
+  refreshOnGcButton('refresh_on_gc_button'),
+  filterClassesAndPackagesButton('filter_classes_and_packages_button'),
+  takeSnapshotButton('memory_screen_take_snapshot_button'),
+  clearSnapshotsButton('memory_screen_clear_snapshots_button');
+
+  const WidgetKeys(this.id);
+
+  final String id;
+}
+
+enum EventKeys {
+  // Generic events
+  selectElementEvent('select-element'),
+  highlightElementEvent('highlight-element'),
+  pageChangedEventPrefix('page-changed.'),
+
+  // Memory screen events
+  memorySnapshotTakenEvent('mem-snapshot-done');
+
+  const EventKeys(this.id);
+
+  final String id;
+}
+
+enum ActionKeys {
+  // Generic actions
+  selectElementAction('select'),
+  highlightElementAction('highlight'),
+
+  // Memory screen actions
+  takeMemorySnapshotAction('take-mem-snapshot');
+
+  const ActionKeys(this.id);
+
+  final String id;
+}

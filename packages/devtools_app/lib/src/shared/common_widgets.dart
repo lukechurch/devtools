@@ -21,6 +21,7 @@ import 'dialogs.dart';
 import 'globals.dart';
 import 'primitives/auto_dispose.dart';
 import 'primitives/flutter_widgets/linked_scroll_controller.dart';
+import 'primitives/highlightable.dart';
 import 'primitives/utils.dart';
 import 'theme.dart';
 import 'ui/icons.dart';
@@ -93,7 +94,7 @@ TextStyle primaryColorLight(TextStyle style, BuildContext context) {
 }
 
 class OutlinedIconButton extends IconLabelButton {
-  const OutlinedIconButton({
+  OutlinedIconButton({
     required IconData icon,
     required VoidCallback? onPressed,
     String? tooltip,
@@ -117,8 +118,8 @@ class OutlinedIconButton extends IconLabelButton {
 /// * `onPressed`: The callback to be called upon pressing the button.
 /// * `minScreenWidthForTextBeforeScaling`: The minimum width the button can be before the text is
 ///    omitted.
-class IconLabelButton extends StatelessWidget {
-  const IconLabelButton({
+class IconLabelButton extends StatefulWidget with HighlightableMixin {
+  IconLabelButton({
     Key? key,
     this.icon,
     this.imageIcon,
@@ -131,7 +132,9 @@ class IconLabelButton extends StatelessWidget {
     this.tooltipPadding,
     this.outlined = true,
   })  : assert((icon == null) != (imageIcon == null)),
-        super(key: key);
+        super(key: key) {
+    initHighlightable();
+  }
 
   final IconData? icon;
 
@@ -155,20 +158,36 @@ class IconLabelButton extends StatelessWidget {
   final bool outlined;
 
   @override
+  State<StatefulWidget> createState() => _IconLabelButtonState();
+}
+
+class _IconLabelButtonState<T extends IconLabelButton> extends State<T>
+    with
+        HighlightableStateMixin,
+        SingleTickerProviderStateMixin,
+        AutoDisposeMixin {
+  @override
+  void initState() {
+    initHighlightableState();
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final iconLabel = MaterialIconLabel(
-      label: label,
-      iconData: icon,
-      imageIcon: imageIcon,
-      minScreenWidthForTextBeforeScaling: minScreenWidthForTextBeforeScaling,
-      color: color,
+      label: widget.label,
+      iconData: widget.icon,
+      imageIcon: widget.imageIcon,
+      minScreenWidthForTextBeforeScaling:
+          widget.minScreenWidthForTextBeforeScaling,
+      color: widget.isHighlighted.value ? animation.value : widget.color,
     );
-    if (elevatedButton) {
+    if (widget.elevatedButton) {
       return maybeWrapWithTooltip(
-        tooltip: tooltip,
-        tooltipPadding: tooltipPadding,
+        tooltip: widget.tooltip,
+        tooltipPadding: widget.tooltipPadding,
         child: ElevatedButton(
-          onPressed: onPressed,
+          onPressed: widget.onPressed,
           child: iconLabel,
         ),
       );
@@ -176,32 +195,38 @@ class IconLabelButton extends StatelessWidget {
     // TODO(kenz): this SizedBox wrapper should be unnecessary once
     // https://github.com/flutter/flutter/issues/79894 is fixed.
     return maybeWrapWithTooltip(
-      tooltip: tooltip,
-      tooltipPadding: tooltipPadding,
+      tooltip: widget.tooltip,
+      tooltipPadding: widget.tooltipPadding,
       child: SizedBox(
         height: defaultButtonHeight,
-        width: !includeText(context, minScreenWidthForTextBeforeScaling)
+        width: !includeText(context, widget.minScreenWidthForTextBeforeScaling)
             ? buttonMinWidth
             : null,
-        child: outlined
+        child: widget.outlined
             ? OutlinedButton(
                 style: denseAwareOutlinedButtonStyle(
                   context,
-                  minScreenWidthForTextBeforeScaling,
+                  widget.minScreenWidthForTextBeforeScaling,
                 ),
-                onPressed: onPressed,
+                onPressed: widget.onPressed,
                 child: iconLabel,
               )
             : TextButton(
-                onPressed: onPressed,
+                onPressed: widget.onPressed,
                 style: denseAwareTextButtonStyle(
                   context,
-                  minScreenWidthForTextBeforeScaling,
+                  widget.minScreenWidthForTextBeforeScaling,
                 ),
                 child: iconLabel,
               ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    disposeHighlightableState();
+    super.dispose();
   }
 }
 
@@ -318,7 +343,7 @@ class PauseResumeButtonGroup extends StatelessWidget {
 }
 
 class ClearButton extends IconLabelButton {
-  const ClearButton({
+  ClearButton({
     Key? key,
     double? minScreenWidthForTextBeforeScaling,
     String tooltip = 'Clear',
@@ -337,7 +362,7 @@ class ClearButton extends IconLabelButton {
 }
 
 class RefreshButton extends IconLabelButton {
-  const RefreshButton({
+  RefreshButton({
     Key? key,
     String label = 'Refresh',
     double? minScreenWidthForTextBeforeScaling,
@@ -354,7 +379,7 @@ class RefreshButton extends IconLabelButton {
           onPressed: onPressed,
         );
 
-  const RefreshButton.icon({
+  RefreshButton.icon({
     Key? key,
     String? tooltip,
     required VoidCallback? onPressed,
@@ -373,24 +398,30 @@ class RefreshButton extends IconLabelButton {
   final bool isIconButton;
 
   @override
+  State<StatefulWidget> createState() => _RefreshButtonState();
+}
+
+class _RefreshButtonState extends _IconLabelButtonState<RefreshButton> {
+  @override
   Widget build(BuildContext context) {
-    if (!isIconButton || !outlined) {
+    if (!widget.isIconButton || !widget.outlined) {
       return super.build(context);
     }
     return OutlinedIconButton(
-      onPressed: onPressed,
-      icon: icon!,
+      onPressed: widget.onPressed,
+      icon: widget.icon!,
     );
   }
 }
 
 /// A Refresh ToolbarAction button.
 class ToolbarRefresh extends ToolbarAction {
-  const ToolbarRefresh({
+  ToolbarRefresh({
+    Key? key,
     super.icon = Icons.refresh,
     required super.onPressed,
     super.tooltip = 'Refresh',
-  });
+  }) : super(key: key);
 }
 
 /// Button to start recording data.
@@ -401,7 +432,7 @@ class ToolbarRefresh extends ToolbarAction {
 /// * `labelOverride`: Optional alternative text to use for the button.
 /// * `onPressed`: The callback to be called upon pressing the button.
 class RecordButton extends IconLabelButton {
-  const RecordButton({
+  RecordButton({
     Key? key,
     required bool recording,
     required VoidCallback onPressed,
@@ -426,7 +457,7 @@ class RecordButton extends IconLabelButton {
 ///    omitted.
 /// * `onPressed`: The callback to be called upon pressing the button.
 class StopRecordingButton extends IconLabelButton {
-  const StopRecordingButton({
+  StopRecordingButton({
     Key? key,
     required bool recording,
     required VoidCallback onPressed,
@@ -444,10 +475,12 @@ class StopRecordingButton extends IconLabelButton {
 }
 
 class SettingsOutlinedButton extends OutlinedIconButton {
-  const SettingsOutlinedButton({
+  SettingsOutlinedButton({
+    Key? key,
     required VoidCallback onPressed,
     String? tooltip,
   }) : super(
+          key: key,
           onPressed: onPressed,
           icon: Icons.settings,
           tooltip: tooltip,
@@ -514,12 +547,13 @@ class CollapseAllButton extends StatelessWidget {
 /// shown or hidden state.
 class VisibilityButton extends StatelessWidget {
   const VisibilityButton({
+    Key? key,
     required this.show,
     required this.onPressed,
     this.minScreenWidthForTextBeforeScaling,
     required this.label,
     required this.tooltip,
-  });
+  }) : super(key: key);
 
   final ValueListenable<bool> show;
 
@@ -717,7 +751,7 @@ class ProcessingInfo extends StatelessWidget {
 ///   offlineController.exitOfflineMode();
 /// }
 class ExitOfflineButton extends IconLabelButton {
-  const ExitOfflineButton({required VoidCallback onPressed})
+  ExitOfflineButton({required VoidCallback onPressed})
       : super(
           key: const Key('exit offline button'),
           onPressed: onPressed,
@@ -866,15 +900,17 @@ class DevToolsIconButton extends StatelessWidget {
 
 /// A wrapper around a TextButton, an Icon, and an optional Tooltip; used for
 /// small toolbar actions.
-class ToolbarAction extends StatelessWidget {
-  const ToolbarAction({
+class ToolbarAction extends StatefulWidget with HighlightableMixin {
+  ToolbarAction({
     required this.icon,
     required this.onPressed,
     this.tooltip,
     Key? key,
     this.size,
     this.style,
-  }) : super(key: key);
+  }) : super(key: key) {
+    initHighlightable();
+  }
 
   final TextStyle? style;
   final IconData icon;
@@ -883,27 +919,96 @@ class ToolbarAction extends StatelessWidget {
   final double? size;
 
   @override
+  State<StatefulWidget> createState() => _ToolbarActionState();
+}
+
+class _ToolbarActionState extends State<ToolbarAction>
+    with
+        HighlightableStateMixin,
+        SingleTickerProviderStateMixin,
+        AutoDisposeMixin {
+  @override
+  void initState() {
+    initHighlightableState();
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final button = TextButton(
       style: TextButton.styleFrom(
         padding: EdgeInsets.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        textStyle: style,
+        textStyle: widget.isHighlighted.value
+            ? (widget.style ?? DefaultTextStyle.of(context).style)
+                .copyWith(color: animation.value)
+            : widget.style,
       ),
-      onPressed: onPressed,
+      onPressed: widget.onPressed,
       child: Icon(
-        icon,
-        size: size ?? actionsIconSize,
-        color: style?.color,
+        widget.icon,
+        size: widget.size ?? actionsIconSize,
+        color:
+            widget.isHighlighted.value ? animation.value : widget.style?.color,
       ),
     );
 
-    return tooltip == null
+    return widget.tooltip == null
         ? button
         : DevToolsTooltip(
-            message: tooltip,
+            message: widget.tooltip,
             child: button,
           );
+  }
+
+  @override
+  void dispose() {
+    disposeHighlightableState();
+    super.dispose();
+  }
+}
+
+class HighlightableWrapper extends StatefulWidget with HighlightableMixin {
+  HighlightableWrapper({super.key, required this.child}) {
+    initHighlightable();
+  }
+
+  final Widget child;
+
+  @override
+  State<StatefulWidget> createState() => HighlightableWrapperState();
+}
+
+class HighlightableWrapperState extends State<HighlightableWrapper>
+    with
+        HighlightableStateMixin,
+        SingleTickerProviderStateMixin,
+        AutoDisposeMixin {
+  @override
+  void initState() {
+    initHighlightableState();
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    print(animation.value);
+    print(widget.child);
+    Color(0xfff44437);
+    Color(0xfffefdfd);
+    Color(0xfff44336);
+    return DefaultTextStyle(
+      style: widget.isHighlighted.value
+          ? DefaultTextStyle.of(context).style.copyWith(color: animation.value)
+          : DefaultTextStyle.of(context).style,
+      child: widget.child,
+    );
+  }
+
+  @override
+  void dispose() {
+    disposeHighlightableState();
+    super.dispose();
   }
 }
 
@@ -1041,7 +1146,7 @@ class DevToolsToggleButtonGroup extends StatelessWidget {
 ///    omitted.
 /// * `onPressed`: The callback to be called upon pressing the button.
 class ExportButton extends IconLabelButton {
-  const ExportButton({
+  ExportButton({
     Key? key,
     required VoidCallback? onPressed,
     required double minScreenWidthForTextBeforeScaling,
@@ -1084,8 +1189,8 @@ class InformationButton extends StatelessWidget {
   }
 }
 
-class ToggleButton extends StatelessWidget {
-  const ToggleButton({
+class ToggleButton extends StatefulWidget with HighlightableMixin {
+  ToggleButton({
     Key? key,
     required this.onPressed,
     required this.isSelected,
@@ -1094,7 +1199,9 @@ class ToggleButton extends StatelessWidget {
     this.outlined = true,
     this.label,
     this.shape,
-  }) : super(key: key);
+  }) : super(key: key) {
+    initHighlightable();
+  }
 
   final String message;
 
@@ -1111,42 +1218,61 @@ class ToggleButton extends StatelessWidget {
   final bool outlined;
 
   @override
+  State<StatefulWidget> createState() => _ToggleButtonState();
+}
+
+class _ToggleButtonState extends State<ToggleButton>
+    with
+        HighlightableStateMixin,
+        SingleTickerProviderStateMixin,
+        AutoDisposeMixin {
+  @override
+  void initState() {
+    initHighlightableState();
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return DevToolsTooltip(
-      message: message,
+      message: widget.message,
       // TODO(kenz): this SizedBox wrapper should be unnecessary once
       // https://github.com/flutter/flutter/issues/79894 is fixed.
       child: SizedBox(
         height: defaultButtonHeight,
         child: OutlinedButton(
-          key: key,
-          onPressed: onPressed,
+          key: widget.key,
+          onPressed: widget.onPressed,
           style: TextButton.styleFrom(
-            side: outlined ? null : BorderSide.none,
-            backgroundColor: isSelected
+            side: widget.outlined ? null : BorderSide.none,
+            backgroundColor: widget.isSelected
                 ? theme.colorScheme.toggleButtonsFillSelected
                 : Colors.transparent,
-            shape: shape,
+            shape: widget.shape,
           ),
           child: Row(
             children: [
               Icon(
-                icon,
+                widget.icon,
                 size: defaultIconSize,
-                color: isSelected
-                    ? theme.colorScheme.toggleButtonsTitleSelected
-                    : theme.colorScheme.toggleButtonsTitle,
+                color: widget.isHighlighted.value
+                    ? animation.value
+                    : widget.isSelected
+                        ? theme.colorScheme.toggleButtonsTitleSelected
+                        : theme.colorScheme.toggleButtonsTitle,
               ),
-              if (label != null) ...[
+              if (widget.label != null) ...[
                 const SizedBox(width: denseSpacing),
                 Text(
                   style: theme.textTheme.bodyLarge!.apply(
-                    color: isSelected
-                        ? theme.colorScheme.toggleButtonsTitleSelected
-                        : theme.colorScheme.toggleButtonsTitle,
+                    color: widget.isHighlighted.value
+                        ? animation.value
+                        : widget.isSelected
+                            ? theme.colorScheme.toggleButtonsTitleSelected
+                            : theme.colorScheme.toggleButtonsTitle,
                   ),
-                  label!,
+                  widget.label!,
                 ),
               ],
             ],
@@ -1154,6 +1280,12 @@ class ToggleButton extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    disposeHighlightableState();
+    super.dispose();
   }
 }
 
@@ -1174,6 +1306,7 @@ class FilterButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ToggleButton(
+      key: key,
       onPressed: onPressed,
       isSelected: isFilterActive,
       message: message,

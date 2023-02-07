@@ -12,6 +12,7 @@ import '../../../../../shared/analytics/constants.dart' as gac;
 import '../../../../../shared/common_widgets.dart';
 import '../../../../../shared/dialogs.dart';
 import '../../../../../shared/memory/class_name.dart';
+import '../../../../../shared/primitives/simple_items.dart';
 import '../../../../../shared/theme.dart';
 import '../../../../../shared/utils.dart';
 import '../../../shared/heap/class_filter.dart';
@@ -38,6 +39,7 @@ class ClassFilterButton extends StatelessWidget {
       valueListenable: filter,
       builder: (context, filter, _) {
         return FilterButton(
+          key: Key(WidgetKeys.filterClassesAndPackagesButton.id),
           onPressed: () {
             ga.select(
               gac.memory,

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../shared/common_widgets.dart';
 import '../../../../shared/globals.dart';
+import '../../../../shared/primitives/simple_items.dart';
 import '../../shared/primitives/simple_elements.dart';
 
 class PrimaryControls extends StatelessWidget {
@@ -16,6 +17,7 @@ class PrimaryControls extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return VisibilityButton(
+      key: Key(WidgetKeys.toggleMemoryChartButton.id),
       show: preferences.memory.showChart,
       onPressed: (show) => preferences.memory.showChart.value = show,
       minScreenWidthForTextBeforeScaling: memoryControlsMinVerboseWidth,
