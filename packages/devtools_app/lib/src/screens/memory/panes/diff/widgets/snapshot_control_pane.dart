@@ -50,18 +50,29 @@ class SnapshotControlPane extends StatelessWidget {
                 ],
               ],
             ),
-            ToolbarAction(
-              icon: Icons.clear,
-              tooltip: 'Delete snapshot',
-              onPressed: isProcessing
-                  ? null
-                  : () {
-                      controller.deleteCurrentSnapshot();
-                      ga.select(
-                        gac.memory,
-                        gac.MemoryEvent.diffSnapshotDelete,
-                      );
-                    },
+            Row(
+              children: [
+                ToolbarAction(
+                  icon: Icons.clear,
+                  tooltip: 'Delete snapshot',
+                  onPressed: isProcessing
+                      ? null
+                      : () {
+                          controller.deleteCurrentSnapshot();
+                          ga.select(
+                            gac.memory,
+                            gac.MemoryEvent.diffSnapshotDelete,
+                          );
+                        },
+                ),
+                ToolbarAction(
+                  icon: Icons.help_outline,
+                  tooltip: 'Show help panel about diff-ing memory snapshots',
+                  onPressed: () {
+                    controller.edgePanelController.toggleEdgePanelVisible(true);
+                  },
+                ),
+              ],
             ),
           ],
         );

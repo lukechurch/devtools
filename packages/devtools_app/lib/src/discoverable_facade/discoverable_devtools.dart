@@ -1,4 +1,3 @@
-
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
@@ -107,7 +106,7 @@ class DiscoverableDevToolsApp {
     }
   }
 
-  final highlightableElements = <Key, HighlightableMixin>{};
+  final highlightableElements = <Key, HighlightableStateMixin>{};
 }
 
 abstract class DiscoverablePage {

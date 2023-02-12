@@ -12,6 +12,7 @@ import '../../../../../discoverable_facade/discoverable_devtools.dart';
 import '../../../../../shared/analytics/analytics.dart' as ga;
 import '../../../../../shared/analytics/constants.dart' as gac;
 import '../../../../../shared/config_specific/import_export/import_export.dart';
+import '../../../../../shared/edge_panel.dart';
 import '../../../../../shared/globals.dart';
 import '../../../../../shared/memory/class_name.dart';
 import '../../../../../shared/primitives/auto_dispose.dart';
@@ -21,6 +22,7 @@ import '../../../shared/heap/class_filter.dart';
 import '../../../shared/heap/heap.dart';
 import '../../../shared/heap/model.dart';
 import '../../../shared/primitives/memory_utils.dart';
+import '../diff_pane.dart';
 import 'heap_diff.dart';
 import 'item_controller.dart';
 import 'simple_controllers.dart';
@@ -34,6 +36,9 @@ class DiffPaneController extends DisposableController {
   /// If true, a snapshot is being taken.
   ValueListenable<bool> get isTakingSnapshot => _isTakingSnapshot;
   final _isTakingSnapshot = ValueNotifier<bool>(false);
+
+  final edgePanelController =
+      EdgePanelControllerMarkdownString(snapshotDocumentation);
 
   final retainingPathController = RetainingPathController();
 
@@ -82,6 +87,8 @@ class DiffPaneController extends DisposableController {
     eventsManager.addEvent(
       StructuredLogEvent(EventKeys.memorySnapshotTakenEvent.id),
     );
+
+    if (newElementIndex == 1) edgePanelController.toggleEdgePanelVisible(true);
   }
 
   void clearSnapshots() {

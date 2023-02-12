@@ -8,6 +8,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import '../../../../shared/analytics/constants.dart' as gac;
 import '../../../../shared/common_widgets.dart';
 import '../../../../shared/config_specific/launch_url/launch_url.dart';
+import '../../../../shared/edge_panel.dart';
 import '../../../../shared/split.dart';
 import '../../../../shared/theme.dart';
 import '../../shared/primitives/simple_elements.dart';
@@ -52,36 +53,40 @@ class _SnapshotItemContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<SnapshotItem>(
-      valueListenable: controller.derived.selectedItem,
-      builder: (_, item, __) {
-        if (item is SnapshotDocItem) {
-          return Padding(
-            padding: const EdgeInsets.all(defaultSpacing),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Markdown(
-                    data: _snapshotDocumentation,
-                    onTapLink: (text, url, title) async =>
-                        await launchUrl(url!),
+    return EdgePanelViewer(
+      controller: controller.edgePanelController,
+      title: 'Diffing memory snapshots',
+      child: ValueListenableBuilder<SnapshotItem>(
+        valueListenable: controller.derived.selectedItem,
+        builder: (_, item, __) {
+          if (item is SnapshotDocItem) {
+            return Padding(
+              padding: const EdgeInsets.all(defaultSpacing),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Markdown(
+                      data: snapshotDocumentation,
+                      onTapLink: (text, url, title) async =>
+                          await launchUrl(url!),
+                    ),
                   ),
-                ),
-                const SizedBox(height: denseSpacing),
-                MoreInfoLink(
-                  url: DocLinks.diff.value,
-                  gaScreenName: gac.memory,
-                  gaSelectedItemDescription:
-                      gac.topicDocumentationLink(_documentationTopic),
-                ),
-              ],
-            ),
-          );
-        }
+                  const SizedBox(height: denseSpacing),
+                  MoreInfoLink(
+                    url: DocLinks.diff.value,
+                    gaScreenName: gac.memory,
+                    gaSelectedItemDescription:
+                        gac.topicDocumentationLink(_documentationTopic),
+                  ),
+                ],
+              ),
+            );
+          }
 
-        return SnapshotInstanceItemPane(controller: controller);
-      },
+          return SnapshotInstanceItemPane(controller: controller);
+        },
+      ),
     );
   }
 }
@@ -113,16 +118,16 @@ class SnapshotInstanceItemPane extends StatelessWidget {
 }
 
 /// `\v` adds vertical space
-const _snapshotDocumentation = '''
+const snapshotDocumentation = '''
 1. Understand [Dart memory concepts](https://docs.flutter.dev/development/tools/devtools/memory#basic-memory-concepts).
 
 \v
 
 2. Take a **heap snapshot** to view current memory allocation:
 
-    a. In the Snapshots panel, click the ● button
+    a. In the Snapshots panel, click [the ● button](devtools://memory/memory_screen_take_snapshot_button?action=highlight)
 
-    b. If you want to refine results, use the **Filter** button
+    b. If you want to refine results, use the [Filter button](devtools://memory/filter_classes_and_packages_button?action=highlight)
 
     c. Select a class from the snapshot table to view its retaining paths
 

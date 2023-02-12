@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../discoverable_facade/discoverable_devtools.dart';
 import '../../shared/analytics/constants.dart' as analytics_constants;
 import '../../shared/globals.dart';
+import '../../shared/primitives/highlightable.dart';
 import '../../shared/primitives/simple_items.dart';
 import 'memory_controller.dart';
 import 'memory_screen.dart';
@@ -50,10 +51,11 @@ class MemoryDiscoverableFacade extends DiscoverablePage {
         data: {'key': key},
       ),
     );
-    if (discoverableApp.highlightableElements.keys.contains(Key(key))) {
-      discoverableApp.highlightableElements[Key(key)]
-          ?.toggleIsHighlighted(true);
+    final highlightable = discoverableApp.highlightableElements[Key(key)];
+    if (highlightable == null) {
+      print('Element $key not found, cannot highlight');
       return;
     }
+    (highlightable.widget as HighlightableMixin).toggleIsHighlighted(true);
   }
 }

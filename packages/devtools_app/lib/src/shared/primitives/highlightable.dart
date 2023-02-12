@@ -7,21 +7,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../devtools_app.dart';
-import '../globals.dart';
-import 'auto_dispose.dart';
 
 mixin HighlightableMixin on StatefulWidget {
   final isHighlighted = ValueNotifier<bool>(false);
-
-  void initHighlightable() {
-    if (key != null) discoverableApp.highlightableElements[key!] = this;
-  }
 
   void toggleIsHighlighted(
     bool value, {
     Duration? duration = const Duration(seconds: 3),
   }) {
-    print('toggling $key');
+    if (key == null) return;
+
     isHighlighted.value = value;
     if (duration == null) return;
     Timer(duration, () {
@@ -35,14 +30,30 @@ mixin HighlightableStateMixin<T extends StatefulWidget> on State<T>
   late AnimationController controller;
   late Animation<Color?> animation;
 
-  void initHighlightableState() {
-    final highlightableWidget = widget as HighlightableMixin;
+  VoidCallback? _isHighlightedListener;
 
+  void initHighlightableState() {
+    if (widget.key == null) return;
+
+    discoverableApp.highlightableElements[widget.key!] = this;
+    _initAnimationController();
+    _initIsHighlightedListener();
+  }
+
+  @override
+  void didUpdateWidget(T oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if ((oldWidget as HighlightableMixin).isHighlighted !=
+        (widget as HighlightableMixin).isHighlighted) {
+      _initIsHighlightedListener();
+    }
+  }
+
+  void _initAnimationController() {
     controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-    controller.repeat(reverse: true);
     final CurvedAnimation curve = CurvedAnimation(
       parent: controller,
       curve: Curves.easeInOut,
@@ -52,31 +63,40 @@ mixin HighlightableStateMixin<T extends StatefulWidget> on State<T>
       begin: Colors.white,
     ).animate(curve);
 
-    animation.addStatusListener((status) {
-      if (!highlightableWidget.isHighlighted.value) return;
-      print('animation status change');
-      if (status == AnimationStatus.completed) {
+    addAutoDisposeListener(animation, () {
+      if (!(widget as HighlightableMixin).isHighlighted.value) return;
+      if (animation.status == AnimationStatus.completed) {
         controller.reverse();
-      } else if (status == AnimationStatus.dismissed) {
+      } else if (animation.status == AnimationStatus.dismissed) {
         controller.forward();
       }
       setState(() {});
     });
+  }
 
-    addAutoDisposeListener(highlightableWidget.isHighlighted, () {
-      print('highlightable change');
+  void _initIsHighlightedListener() {
+    cancelListener(_isHighlightedListener);
+    _isHighlightedListener = () {
       setState(() {
-        if (highlightableWidget.isHighlighted.value) {
+        if ((widget as HighlightableMixin).isHighlighted.value) {
           controller.reset();
           controller.forward();
           return;
         }
         controller.reset();
       });
-    });
+    };
+    addAutoDisposeListener(
+      (widget as HighlightableMixin).isHighlighted,
+      _isHighlightedListener,
+    );
   }
 
   void disposeHighlightableState() {
+    if (widget.key == null) return;
+
     controller.dispose();
+    discoverableApp.highlightableElements.remove(widget.key);
+    super.dispose();
   }
 }

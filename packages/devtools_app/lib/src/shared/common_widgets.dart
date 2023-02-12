@@ -132,9 +132,7 @@ class IconLabelButton extends StatefulWidget with HighlightableMixin {
     this.tooltipPadding,
     this.outlined = true,
   })  : assert((icon == null) != (imageIcon == null)),
-        super(key: key) {
-    initHighlightable();
-  }
+        super(key: key);
 
   final IconData? icon;
 
@@ -168,8 +166,8 @@ class _IconLabelButtonState<T extends IconLabelButton> extends State<T>
         AutoDisposeMixin {
   @override
   void initState() {
-    initHighlightableState();
     super.initState();
+    initHighlightableState();
   }
 
   @override
@@ -908,9 +906,7 @@ class ToolbarAction extends StatefulWidget with HighlightableMixin {
     Key? key,
     this.size,
     this.style,
-  }) : super(key: key) {
-    initHighlightable();
-  }
+  }) : super(key: key);
 
   final TextStyle? style;
   final IconData icon;
@@ -929,8 +925,8 @@ class _ToolbarActionState extends State<ToolbarAction>
         AutoDisposeMixin {
   @override
   void initState() {
-    initHighlightableState();
     super.initState();
+    initHighlightableState();
   }
 
   @override
@@ -969,9 +965,7 @@ class _ToolbarActionState extends State<ToolbarAction>
 }
 
 class HighlightableWrapper extends StatefulWidget with HighlightableMixin {
-  HighlightableWrapper({super.key, required this.child}) {
-    initHighlightable();
-  }
+  HighlightableWrapper({super.key, required this.child});
 
   final Widget child;
 
@@ -986,17 +980,12 @@ class HighlightableWrapperState extends State<HighlightableWrapper>
         AutoDisposeMixin {
   @override
   void initState() {
-    initHighlightableState();
     super.initState();
+    initHighlightableState();
   }
 
   @override
   Widget build(BuildContext context) {
-    print(animation.value);
-    print(widget.child);
-    Color(0xfff44437);
-    Color(0xfffefdfd);
-    Color(0xfff44336);
     return DefaultTextStyle(
       style: widget.isHighlighted.value
           ? DefaultTextStyle.of(context).style.copyWith(color: animation.value)
@@ -1199,9 +1188,7 @@ class ToggleButton extends StatefulWidget with HighlightableMixin {
     this.outlined = true,
     this.label,
     this.shape,
-  }) : super(key: key) {
-    initHighlightable();
-  }
+  }) : super(key: key);
 
   final String message;
 
@@ -1228,8 +1215,8 @@ class _ToggleButtonState extends State<ToggleButton>
         AutoDisposeMixin {
   @override
   void initState() {
-    initHighlightableState();
     super.initState();
+    initHighlightableState();
   }
 
   @override
