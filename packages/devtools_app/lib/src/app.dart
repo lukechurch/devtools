@@ -100,8 +100,6 @@ class DevToolsAppState extends State<DevToolsApp> with AutoDisposeMixin {
 
   final hoverCardController = HoverCardController();
 
-  final devToolsTourController = UserToursController();
-
   late ReleaseNotesController releaseNotesController;
 
   late final routerDelegate = DevToolsRouterDelegate(_getPage);
