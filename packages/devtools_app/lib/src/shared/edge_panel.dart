@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -17,7 +18,7 @@ import 'primitives/auto_dispose.dart';
 import 'primitives/simple_items.dart';
 import 'theme.dart';
 
-const debugTestEdgePanel = false;
+const debugTestEdgePanel = true;
 
 class EdgePanelViewer extends StatefulWidget {
   const EdgePanelViewer({
@@ -52,16 +53,16 @@ class _EdgePanelViewerState extends State<EdgePanelViewer>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    isVisible = widget.controller.edgePanelVisible.value;
-    markdownData = widget.controller.edgePanelMarkdown.value;
+    isVisible = widget.controller.isVisible.value;
+    markdownData = widget.controller.markdown.value;
 
     visibilityController = longAnimationController(this);
     visibilityAnimation =
         Tween<double>(begin: 1.0, end: 0).animate(visibilityController);
 
-    addAutoDisposeListener(widget.controller.edgePanelVisible, () {
+    addAutoDisposeListener(widget.controller.isVisible, () {
       setState(() {
-        isVisible = widget.controller.edgePanelVisible.value;
+        isVisible = widget.controller.isVisible.value;
         if (isVisible) {
           visibilityController.forward();
         } else {
@@ -70,10 +71,10 @@ class _EdgePanelViewerState extends State<EdgePanelViewer>
       });
     });
 
-    markdownData = widget.controller.edgePanelMarkdown.value;
-    addAutoDisposeListener(widget.controller.edgePanelMarkdown, () {
+    markdownData = widget.controller.markdown.value;
+    addAutoDisposeListener(widget.controller.markdown, () {
       setState(() {
-        markdownData = widget.controller.edgePanelMarkdown.value;
+        markdownData = widget.controller.markdown.value;
       });
     });
   }
@@ -154,8 +155,7 @@ class EdgePanel extends AnimatedWidget {
               actions: [
                 IconButton(
                   padding: const EdgeInsets.all(0.0),
-                  onPressed: () =>
-                      edgePanelController.toggleEdgePanelVisible(false),
+                  onPressed: () => edgePanelController.toggleVisibility(false),
                   icon: const Icon(Icons.close),
                 ),
               ],
@@ -180,33 +180,40 @@ class EdgePanel extends AnimatedWidget {
 }
 
 abstract class EdgePanelController {
-  ValueListenable<String?> get edgePanelMarkdown => _edgePanelMarkdown;
+  ValueListenable<String?> get markdown => _markdown;
 
-  final _edgePanelMarkdown = ValueNotifier<String?>(null);
+  final _markdown = ValueNotifier<String?>(null);
 
-  ValueListenable<bool> get edgePanelVisible => _edgePanelVisible;
+  ValueListenable<bool> get isVisible => _isVisible;
 
-  final _edgePanelVisible = ValueNotifier<bool>(false);
+  final _isVisible = ValueNotifier<bool>(false);
 
-  void toggleEdgePanelVisible(bool visible) {
-    _edgePanelVisible.value = visible;
+  void toggleVisibility(bool visible) {
+    _isVisible.value = visible;
   }
 
-  String get _flutterDocsSite => debugTestEdgePanel
-      ? 'https://flutter-website-dt-staging.web.app'
-      : 'https://docs.flutter.dev';
+  String get _flutterDocsSite =>
+      debugTestEdgePanel ? 'http://localhost:4002' : 'https://docs.flutter.dev';
 
   static const _unsupportedPathSyntax = '{{site.url}}';
 
   String _replaceUnsupportedPathSyntax(String markdownText) {
-    // This is a workaround so that the images in the edge panel will appear.
+    // This is a workaround so that the images will appear and links will
+    // point to the right links on the website.
     // The {{site.url}} syntax is best practices for the flutter website
     // repo, where these release notes are hosted, so we are performing this
     // workaround on our end to ensure the images render properly.
-    return markdownText.replaceAll(
+    markdownText = markdownText.replaceAll(
       _unsupportedPathSyntax,
       _flutterDocsSite,
     );
+
+    // This is a workaround so that any CSS formatting applied to images and
+    // links on the flutter website can be ignored in devtools.
+    // TODO: The regex is too simplistic, needs fixing to do bracket balancing for nested brackets.
+    markdownText = markdownText.replaceAll(RegExp('\\{:(.*?)\\}'), '');
+
+    return markdownText;
   }
 }
 
@@ -214,20 +221,21 @@ class EdgePanelControllerMarkdownUrl extends EdgePanelController {
   EdgePanelControllerMarkdownUrl(
     String markdownFileName,
   ) {
-    unawaited(_fetchEdgePanel(markdownFileName));
+    unawaited(_fetchMarkdownContents(markdownFileName));
   }
 
-  set edgePanelMarkdownFileName(String markdownFileName) {
-    unawaited(_fetchEdgePanel(markdownFileName));
+  set markdownFileName(String markdownFileName) {
+    unawaited(_fetchMarkdownContents(markdownFileName));
   }
 
   final String _devtoolsDocsFolder = 'development/tools/devtools';
 
-  Future<void> _fetchEdgePanel(markdownFileName) async {
-    final edgePanelMarkdown = await http.read(
+  Future<void> _fetchMarkdownContents(markdownFileName) async {
+    final markdownText = await http.read(
       Uri.parse('$_flutterDocsSite/$_devtoolsDocsFolder/$markdownFileName'),
     );
-    _edgePanelMarkdown.value = _replaceUnsupportedPathSyntax(edgePanelMarkdown);
+    final utf8Markdown = utf8.decode(markdownText.runes.toList());
+    _markdown.value = _replaceUnsupportedPathSyntax(utf8Markdown);
   }
 }
 
@@ -235,10 +243,10 @@ class EdgePanelControllerMarkdownString extends EdgePanelController {
   EdgePanelControllerMarkdownString(
     String markdownText,
   ) {
-    _edgePanelMarkdown.value = _replaceUnsupportedPathSyntax(markdownText);
+    _markdown.value = _replaceUnsupportedPathSyntax(markdownText);
   }
 
-  set edgePanelMarkdownText(String markdownText) {
-    _edgePanelMarkdown.value = _replaceUnsupportedPathSyntax(markdownText);
+  set markdownText(String markdownText) {
+    _markdown.value = _replaceUnsupportedPathSyntax(markdownText);
   }
 }

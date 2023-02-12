@@ -69,7 +69,7 @@ class SnapshotControlPane extends StatelessWidget {
                   icon: Icons.help_outline,
                   tooltip: 'Show help panel about diff-ing memory snapshots',
                   onPressed: () {
-                    controller.edgePanelController.toggleEdgePanelVisible(true);
+                    controller.edgePanelController.toggleVisibility(true);
                   },
                 ),
               ],

@@ -88,7 +88,7 @@ class DiffPaneController extends DisposableController {
       StructuredLogEvent(EventKeys.memorySnapshotTakenEvent.id),
     );
 
-    if (newElementIndex == 1) edgePanelController.toggleEdgePanelVisible(true);
+    if (newElementIndex == 1) edgePanelController.toggleVisibility(true);
   }
 
   void clearSnapshots() {

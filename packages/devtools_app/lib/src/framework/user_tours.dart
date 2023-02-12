@@ -18,10 +18,10 @@ class _OpenAppToursActionState extends State<OpenAppToursAction>
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    isVisible = userToursController.userToursVisible.value;
-    addAutoDisposeListener(userToursController.userToursVisible, () {
+    isVisible = userToursController.isVisible.value;
+    addAutoDisposeListener(userToursController.isVisible, () {
       setState(() {
-        isVisible = userToursController.userToursVisible.value;
+        isVisible = userToursController.isVisible.value;
       });
     });
   }
@@ -34,7 +34,7 @@ class _OpenAppToursActionState extends State<OpenAppToursAction>
       message: 'User Tours',
       child: InkWell(
         onTap: () async {
-          userToursController.toggleUserToursVisible(!isVisible);
+          userToursController.toggleVisibility(!isVisible);
         },
         child: Container(
           width: actionWidgetSize,

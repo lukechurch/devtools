@@ -33,7 +33,8 @@ class FrameworkCore {
     setGlobal(FrameworkController, FrameworkController());
     setGlobal(EventsManager, EventsManager());
     setGlobal(DiscoverableDevToolsApp, DiscoverableDevToolsApp());
-    setGlobal(UserToursController, UserToursController());
+    // TODO: the parameter here needs removing and instead replaced with a list mapping devtools screens with their doc location
+    setGlobal(UserToursController, UserToursController('memory-src.md'));
     setGlobal(SurveyService, SurveyService());
     setGlobal(OfflineModeController, OfflineModeController());
     setGlobal(ScriptManager, ScriptManager());
