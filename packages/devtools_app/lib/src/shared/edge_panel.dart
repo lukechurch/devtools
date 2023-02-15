@@ -231,9 +231,12 @@ class EdgePanelControllerMarkdownUrl extends EdgePanelController {
   final String _devtoolsDocsFolder = 'development/tools/devtools';
 
   Future<void> _fetchMarkdownContents(markdownFileName) async {
-    final markdownText = await http.read(
+    var markdownText = await http.read(
       Uri.parse('$_flutterDocsSite/$_devtoolsDocsFolder/$markdownFileName'),
     );
+    if (markdownFileName == 'memory-src.md') {
+      markdownText = '# Using the Memory view\n\n$markdownText';
+    }
     final utf8Markdown = utf8.decode(markdownText.runes.toList());
     _markdown.value = _replaceUnsupportedPathSyntax(utf8Markdown);
   }
