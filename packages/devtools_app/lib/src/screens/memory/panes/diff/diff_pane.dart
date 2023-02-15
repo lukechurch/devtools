@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
@@ -9,6 +11,8 @@ import '../../../../shared/analytics/constants.dart' as gac;
 import '../../../../shared/common_widgets.dart';
 import '../../../../shared/config_specific/launch_url/launch_url.dart';
 import '../../../../shared/edge_panel.dart';
+import '../../../../shared/globals.dart';
+import '../../../../shared/primitives/simple_items.dart';
 import '../../../../shared/split.dart';
 import '../../../../shared/theme.dart';
 import '../../shared/primitives/simple_elements.dart';
@@ -68,8 +72,13 @@ class _SnapshotItemContent extends StatelessWidget {
                   Expanded(
                     child: Markdown(
                       data: snapshotDocumentation,
-                      onTapLink: (text, url, title) async =>
-                          await launchUrl(url!),
+                      onTapLink: (_, href, __) {
+                        if (href!.startsWith(internalUriScheme)) {
+                          unawaited(discoverableApp.handleActionPath(href));
+                          return;
+                        }
+                        unawaited(launchUrl(href));
+                      },
                     ),
                   ),
                   const SizedBox(height: denseSpacing),
