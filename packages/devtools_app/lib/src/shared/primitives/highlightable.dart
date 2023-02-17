@@ -70,13 +70,14 @@ mixin HighlightableStateMixin<T extends StatefulWidget> on State<T>
       } else if (animation.status == AnimationStatus.dismissed) {
         controller.forward();
       }
-      setState(() {});
+      if (mounted) setState(() {});
     });
   }
 
   void _initIsHighlightedListener() {
     cancelListener(_isHighlightedListener);
     _isHighlightedListener = () {
+      if (!mounted) return;
       setState(() {
         if ((widget as HighlightableMixin).isHighlighted.value) {
           controller.reset();
@@ -97,6 +98,5 @@ mixin HighlightableStateMixin<T extends StatefulWidget> on State<T>
 
     controller.dispose();
     discoverableApp.highlightableElements.remove(widget.key);
-    super.dispose();
   }
 }
