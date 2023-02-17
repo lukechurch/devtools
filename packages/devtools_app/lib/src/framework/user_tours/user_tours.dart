@@ -82,7 +82,7 @@ class _UserToursViewerState extends State<UserToursViewer>
 }
 
 class UserToursViewerAnimated extends AnimatedWidget {
-  UserToursViewerAnimated({
+  const UserToursViewerAnimated({
     Key? key,
     required this.userToursController,
     required this.markdownData,
