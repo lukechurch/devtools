@@ -9,8 +9,6 @@ import 'package:flutter/material.dart';
 
 import 'primitives/utils.dart';
 
-void _noOp(_) {}
-
 /// A widget that takes a list of children, lays them out along [axis], and
 /// allows the user to resize them.
 ///
@@ -28,7 +26,6 @@ class Split extends StatefulWidget {
     required this.initialFractions,
     this.minSizes,
     this.splitters,
-    this.onFractionsChanged = _noOp,
   })  : assert(children.length >= 2),
         assert(initialFractions.length >= 2),
         assert(children.length == initialFractions.length),
@@ -70,9 +67,6 @@ class Split extends StatefulWidget {
   /// If this is null, a default splitter will be used to divide [children].
   final List<PreferredSizeWidget>? splitters;
 
-  /// Callback for fractions changed when a splitter is moved.
-  final Function(List<double>) onFractionsChanged;
-
   /// The key passed to the divider between children[index] and
   /// children[index + 1].
   ///
@@ -92,7 +86,7 @@ class Split extends StatefulWidget {
 }
 
 class _SplitState extends State<Split> {
-  late List<double> fractions;
+  late final List<double> fractions;
 
   bool get isHorizontal => widget.axis == Axis.horizontal;
 
@@ -100,14 +94,6 @@ class _SplitState extends State<Split> {
   void initState() {
     super.initState();
     fractions = List.of(widget.initialFractions);
-  }
-
-  @override
-  void didUpdateWidget(Split oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.initialFractions != oldWidget.initialFractions) {
-      fractions = List.of(widget.initialFractions);
-    }
   }
 
   @override
@@ -284,7 +270,6 @@ class _SplitState extends State<Split> {
           ),
       ]);
     }
-    widget.onFractionsChanged(fractions);
     return Flex(
       direction: widget.axis,
       crossAxisAlignment: CrossAxisAlignment.stretch,
