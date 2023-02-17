@@ -609,8 +609,7 @@ bool includeText(
   double? minScreenWidthForTextBeforeScaling,
 ) {
   return minScreenWidthForTextBeforeScaling == null ||
-      MediaQuery.of(context).size.width >
-          // MediaQuery.of(context).size.width - userToursController.width.value >
+      MediaQuery.of(context).size.width - userToursController.width.value >
           scaleByFontFactor(minScreenWidthForTextBeforeScaling);
 }
 
