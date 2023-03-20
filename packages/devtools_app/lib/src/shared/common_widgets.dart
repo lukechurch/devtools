@@ -516,6 +516,7 @@ class CollapseAllButton extends StatelessWidget {
 /// shown or hidden state.
 class VisibilityButton extends StatelessWidget {
   const VisibilityButton({
+    super.key,
     required this.show,
     required this.onPressed,
     this.minScreenWidthForTextBeforeScaling,

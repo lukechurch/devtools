@@ -151,7 +151,6 @@ class EdgePanel extends AnimatedWidget {
           children: [
             AreaPaneHeader(
               title: Text(title ?? ''),
-              needsTopBorder: false,
               actions: [
                 IconButton(
                   padding: const EdgeInsets.all(0.0),
