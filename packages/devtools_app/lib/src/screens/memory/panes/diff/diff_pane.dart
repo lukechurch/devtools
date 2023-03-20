@@ -136,7 +136,7 @@ const snapshotDocumentation = '''
 
     a. In the Snapshots panel, click [the ● button](devtools://memory/memory_screen_take_snapshot_button?action=highlight)
 
-    b. If you want to refine results, use the [Filter button](devtools://memory/filter_classes_and_packages_button?action=highlight)
+    b. If you want to refine results, use the [Filter](devtools://memory/filter_classes_and_packages_button?action=highlight) button
 
     c. Select a class from the snapshot table to view its retaining paths
 
@@ -146,16 +146,16 @@ const snapshotDocumentation = '''
 
 3. Check the **diff** between snapshots to detect allocation issues:
 
-    a. Take a **snapshot**
+    a. Take a [snapshot](devtools://memory/memory_screen_take_snapshot_button?action=highlight)
 
     b. Execute the feature in your application
 
-    c. Take a second snapshot
+    c. Take a second [snapshot](devtools://memory/memory_screen_take_snapshot_button?action=highlight)
 
     d. While viewing the second snapshot, click **Diff with:** and select the first snapshot from the drop-down menu;
     the results area will display the diff
 
-    e. Use the **Filter** button to refine the diff results, if needed
+    e. Use the [Filter](devtools://memory/filter_classes_and_packages_button?action=highlight) button to refine the diff results, if needed
 
     f. Select a class from the diff to view its retaining paths, and see which objects hold the references to those instances
 ''';
