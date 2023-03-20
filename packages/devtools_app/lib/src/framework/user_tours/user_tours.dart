@@ -146,11 +146,11 @@ class UserTours extends AnimatedWidget {
     final theme = Theme.of(context);
     final animation = listenable as Animation<double>;
     final displacement = width * (1 - animation.value);
-    final right = densePadding - displacement;
+    final right = -densePadding - displacement;
 
     return Positioned(
-      top: densePadding,
-      bottom: densePadding,
+      top: -densePadding,
+      bottom: -densePadding,
       right: right,
       width: width,
       child: Card(
