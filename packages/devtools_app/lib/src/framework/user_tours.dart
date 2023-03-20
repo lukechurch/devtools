@@ -43,7 +43,9 @@ class _OpenAppToursActionState extends State<OpenAppToursAction>
           child: Icon(
             Icons.assignment,
             size: actionsIconSize,
-            color: isVisible ? theme.primaryColorLight : Colors.white,
+            color: isVisible
+                ? theme.colorScheme.primary
+                : theme.textTheme.bodyLarge?.color,
           ),
         ),
       ),
