@@ -33,11 +33,18 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  final _garbage = <_MyGarbage>[];
   int _counter = 0;
+  _MyGarbage _gcableItem = _MyGarbage(0, 'Should be gced, initial.');
 
   void _incrementCounter() {
     setState(() {
       _counter++;
+      _garbage.add(_MyGarbage(0, 'Never gced.'));
+      if (identityHashCode(_gcableItem) < 0) {
+        // We need this block to show compiler [_gcableItem] is in use.
+      }
+      _gcableItem = _MyGarbage(0, 'Should be gced, initial.');
     });
   }
 
@@ -68,4 +75,72 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
     );
   }
+}
+
+/// Contains references of different types to
+/// test representation of a heap instance in DevTools console.
+class _MyGarbage {
+  _MyGarbage(this._level, this._note) {
+    if (_level >= _depth) {
+      childClass = null;
+      childList = null;
+      mapSimpleKey = null;
+      mapSimpleValue = null;
+      map = null;
+      // record = null;
+    } else {
+      _MyGarbage createInstance({String? note}) =>
+          _MyGarbage(_level + 1, note ?? _note);
+
+      childClass = createInstance();
+
+      childList = Iterable.generate(_width, (_) => createInstance()).toList();
+
+      mapSimpleKey = Map.fromIterable(
+        Iterable.generate(_width),
+        value: (_) => createInstance(),
+      );
+
+      mapSimpleValue = Map.fromIterable(
+        Iterable.generate(_width),
+        key: (_) => createInstance(),
+      );
+
+      map = Map.fromIterable(
+        Iterable.generate(_width),
+        key: (_) => createInstance(),
+        value: (_) => createInstance(),
+      );
+
+      final _closureMember = createInstance(note: 'closure');
+      closure = () {
+        if (identityHashCode(_closureMember) < 0) {
+          // We need this block to show compiler [_closureMember] is in use.
+        }
+      };
+
+      // TODO(polina-c): uncomment after figuring out how to enable records in dart format
+      // record = ('foo', count: 100, garbage: createInstance(note: 'record'));
+    }
+  }
+
+  static const _depth = 2;
+  static const _width = 3;
+
+  final int _level;
+  final String _note;
+
+  late final _MyGarbage? childClass;
+  late final List<_MyGarbage>? childList;
+  final Map mapSimple = Map.fromIterable(Iterable.generate(_width));
+  final Map mapEmpty = {};
+  final Map mapOfNulls = {null: null};
+  final listOfInt = Iterable.generate(300).toList();
+  late final Map<dynamic, _MyGarbage>? mapSimpleKey;
+  late final Map<_MyGarbage, dynamic>? mapSimpleValue;
+  late final Map<_MyGarbage, _MyGarbage>? map;
+  late final void Function() closure;
+
+  // TODO(polina-c): uncomment after figuring out how to enable records in dart format
+  // late final (String, {int count, _MyGarbage garbage})? record;
 }

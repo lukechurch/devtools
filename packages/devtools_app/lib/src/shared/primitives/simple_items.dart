@@ -47,6 +47,10 @@ enum ScreenMetaData {
 
 const String traceEventsFieldName = 'traceEvents';
 
+const closureName = '<closure>';
+
+const anonymousClosureName = '<anonymous closure>';
+
 const String internalUriScheme = 'devtools';
 const String internalUriActionQueryKey = 'action';
 

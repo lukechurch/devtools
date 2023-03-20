@@ -17,7 +17,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
-import 'package:vm_service/vm_service.dart';
+
+import 'simple_items.dart';
 
 bool isPrivate(String member) => member.startsWith('_');
 
@@ -50,7 +51,8 @@ String escape(String? text) => text == null ? '' : htmlEscape.convert(text);
 
 final NumberFormat nf = NumberFormat.decimalPattern();
 
-String percent2(double d) => '${(d * 100).toStringAsFixed(2)}%';
+String percent(double d, {int fractionDigits = 2}) =>
+    '${(d * 100).toStringAsFixed(fractionDigits)}%';
 
 /// Unifies printing of retained size to avoid confusion related to different rounding.
 String? prettyPrintRetainedSize(int? bites) => prettyPrintBytes(
@@ -187,29 +189,6 @@ int log2(num x) => logBase(x: x.floor(), base: 2).floor();
 int roundToNearestPow10(int x) =>
     pow(10, logBase(x: x, base: 10).ceil()).floor();
 
-String isolateName(IsolateRef ref) {
-  // analysis_server.dart.snapshot$main
-  String name = ref.name!;
-  name = name.replaceFirst(r'.snapshot', '');
-  if (name.contains(r'.dart$')) {
-    name = name + '()';
-  }
-  return name;
-}
-
-String? funcRefName(FuncRef ref) {
-  if (ref.owner is LibraryRef) {
-    //(ref.owner as LibraryRef).uri;
-    return ref.name;
-  } else if (ref.owner is ClassRef) {
-    return '${ref.owner.name}.${ref.name}';
-  } else if (ref.owner is FuncRef) {
-    return '${funcRefName(ref.owner as FuncRef)}.${ref.name}';
-  } else {
-    return ref.name;
-  }
-}
-
 void executeWithDelay(
   Duration delay,
   void callback(), {
@@ -316,7 +295,7 @@ String pluralize(String word, int count, {String? plural}) =>
 /// See (https://github.com/dart-lang/sdk/issues/36999).
 String getSimpleStackFrameName(String? name) {
   name ??= '';
-  final newName = name.replaceAll('<anonymous closure>', '<closure>');
+  final newName = name.replaceAll(anonymousClosureName, closureName);
 
   // If the class name contains a space, then it is not a valid Dart name. We
   // throw out simplified names with spaces to prevent simplifying C++ class
@@ -1170,6 +1149,15 @@ extension SetExtension<T> on Set<T> {
     }
     return false;
   }
+
+  bool containsAny(Iterable<T> any) {
+    for (var e in any) {
+      if (contains(e)) {
+        return true;
+      }
+    }
+    return false;
+  }
 }
 
 extension UiListExtension<T> on List<T> {
@@ -1550,14 +1538,6 @@ extension UriExtension on Uri {
 
 Iterable<T> removeNullValues<T>(Iterable<T?> values) {
   return values.whereType<T>();
-}
-
-bool isPrimativeInstanceKind(String? kind) {
-  return kind == InstanceKind.kBool ||
-      kind == InstanceKind.kDouble ||
-      kind == InstanceKind.kInt ||
-      kind == InstanceKind.kNull ||
-      kind == InstanceKind.kString;
 }
 
 // TODO(mtaylee): Prefer to use this helper method whenever a call to

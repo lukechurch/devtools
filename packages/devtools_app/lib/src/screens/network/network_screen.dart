@@ -29,8 +29,6 @@ import 'network_controller.dart';
 import 'network_model.dart';
 import 'network_request_inspector.dart';
 
-final networkSearchFieldKey = GlobalKey(debugLabel: 'NetworkSearchFieldKey');
-
 class NetworkScreen extends Screen {
   NetworkScreen()
       : super.conditional(
@@ -152,7 +150,7 @@ class _NetworkScreenBodyState extends State<NetworkScreenBody>
     return Column(
       children: [
         _NetworkProfilerControls(controller: controller),
-        const SizedBox(height: denseRowSpacing),
+        const SizedBox(height: intermediateSpacing),
         Expanded(
           child: _NetworkProfilerBody(controller: controller),
         ),
@@ -187,6 +185,9 @@ class _NetworkProfilerControlsState extends State<_NetworkProfilerControls>
   bool _recording = false;
 
   @override
+  SearchControllerMixin get searchController => widget.controller;
+
+  @override
   void initState() {
     super.initState();
 
@@ -219,42 +220,28 @@ class _NetworkProfilerControlsState extends State<_NetworkProfilerControls>
           minScreenWidthForTextBeforeScaling:
               _NetworkProfilerControls._includeTextWidth,
           tooltip: 'Pause recording network traffic',
-          onPressed: _recording
-              ? () {
-                  ga.select(
-                    gac.network,
-                    gac.pause,
-                  );
-                  widget.controller.togglePolling(false);
-                }
-              : null,
+          gaScreen: gac.network,
+          gaSelection: gac.pause,
+          onPressed:
+              _recording ? () => widget.controller.togglePolling(false) : null,
         ),
         const SizedBox(width: denseSpacing),
         ResumeButton(
           minScreenWidthForTextBeforeScaling:
               _NetworkProfilerControls._includeTextWidth,
           tooltip: 'Resume recording network traffic',
-          onPressed: _recording
-              ? null
-              : () {
-                  ga.select(
-                    gac.network,
-                    gac.resume,
-                  );
-                  widget.controller.togglePolling(true);
-                },
+          gaScreen: gac.network,
+          gaSelection: gac.resume,
+          onPressed:
+              _recording ? null : () => widget.controller.togglePolling(true),
         ),
         const SizedBox(width: denseSpacing),
         ClearButton(
           minScreenWidthForTextBeforeScaling:
               _NetworkProfilerControls._includeTextWidth,
-          onPressed: () {
-            ga.select(
-              gac.network,
-              gac.clear,
-            );
-            unawaited(widget.controller.clear());
-          },
+          gaScreen: gac.network,
+          gaSelection: gac.clear,
+          onPressed: widget.controller.clear,
         ),
         const SizedBox(width: defaultSpacing),
         const Expanded(child: SizedBox()),
@@ -262,9 +249,8 @@ class _NetworkProfilerControlsState extends State<_NetworkProfilerControls>
         Container(
           width: wideSearchTextWidth,
           height: defaultTextFieldHeight,
-          child: buildSearchField(
+          child: SearchField<NetworkRequest>(
             controller: widget.controller,
-            searchFieldKey: networkSearchFieldKey,
             searchFieldEnabled: hasRequests,
             shouldRequestFocus: false,
             supportsNavigation: true,
@@ -283,10 +269,9 @@ class _NetworkProfilerControlsState extends State<_NetworkProfilerControls>
     unawaited(
       showDialog(
         context: context,
-        builder: (context) => FilterDialog<NetworkController, NetworkRequest>(
+        builder: (context) => FilterDialog<NetworkRequest>(
           controller: widget.controller,
           queryInstructions: NetworkScreenBody.filterQueryInstructions,
-          queryFilterArguments: widget.controller.filterArgs,
         ),
       ),
     );
@@ -335,13 +320,22 @@ class NetworkRequestsTable extends StatelessWidget {
     required this.activeSearchMatchNotifier,
   }) : super(key: key);
 
-  static MethodColumn methodColumn = MethodColumn();
-  static UriColumn addressColumn = UriColumn();
-  static StatusColumn statusColumn = StatusColumn();
-  static TypeColumn typeColumn = TypeColumn();
-  static DurationColumn durationColumn = DurationColumn();
-  static TimestampColumn timestampColumn = TimestampColumn();
-  static ActionsColumn actionsColumn = ActionsColumn();
+  static final methodColumn = MethodColumn();
+  static final addressColumn = UriColumn();
+  static final statusColumn = StatusColumn();
+  static final typeColumn = TypeColumn();
+  static final durationColumn = DurationColumn();
+  static final timestampColumn = TimestampColumn();
+  static final actionsColumn = ActionsColumn();
+  static final columns = <ColumnData<NetworkRequest>>[
+    methodColumn,
+    addressColumn,
+    statusColumn,
+    typeColumn,
+    durationColumn,
+    timestampColumn,
+    actionsColumn,
+  ];
 
   final NetworkController networkController;
   final List<NetworkRequest> requests;
@@ -350,7 +344,8 @@ class NetworkRequestsTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return OutlineDecoration(
+    return RoundedOutlinedBorder(
+      clip: true,
       child: FlatTable<NetworkRequest?>(
         keyFactory: (NetworkRequest? data) => ValueKey<NetworkRequest?>(data),
         data: requests,
@@ -358,18 +353,15 @@ class NetworkRequestsTable extends StatelessWidget {
         searchMatchesNotifier: searchMatchesNotifier,
         activeSearchMatchNotifier: activeSearchMatchNotifier,
         autoScrollContent: true,
-        columns: [
-          methodColumn,
-          addressColumn,
-          statusColumn,
-          typeColumn,
-          durationColumn,
-          timestampColumn,
-          actionsColumn,
-        ],
+        columns: columns,
         selectionNotifier: networkController.selectedRequest,
         defaultSortColumn: timestampColumn,
         defaultSortDirection: SortDirection.ascending,
+        onItemSelected: (item) {
+          if (item is DartIOHttpRequestData) {
+            unawaited(item.getFullRequestData());
+          }
+        },
       ),
     );
   }
@@ -522,7 +514,7 @@ class StatusColumn extends ColumnData<NetworkRequest>
     return Text(
       getDisplayValue(data),
       style: data.didFail
-          ? theme.regularTextStyle.copyWith(color: devtoolsError)
+          ? TextStyle(color: theme.colorScheme.error)
           : theme.regularTextStyle,
     );
   }

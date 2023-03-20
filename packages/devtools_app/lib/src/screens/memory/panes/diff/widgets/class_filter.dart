@@ -4,7 +4,6 @@
 
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../../shared/analytics/analytics.dart' as ga;
@@ -16,6 +15,7 @@ import '../../../../../shared/primitives/simple_items.dart';
 import '../../../../../shared/theme.dart';
 import '../../../../../shared/utils.dart';
 import '../../../shared/heap/class_filter.dart';
+import '../controller/class_data.dart';
 
 String _adaptRootPackageForFilter(String? rootPackage) {
   if (rootPackage == null || rootPackage.isEmpty) return '';
@@ -23,20 +23,16 @@ String _adaptRootPackageForFilter(String? rootPackage) {
 }
 
 class ClassFilterButton extends StatelessWidget {
-  ClassFilterButton({
-    required this.filter,
-    required this.onChanged,
-    required String? rootPackage,
-  }) : rootPackage = _adaptRootPackageForFilter(rootPackage);
+  ClassFilterButton(this.data)
+      : _rootPackage = _adaptRootPackageForFilter(data.rootPackage);
 
-  final ValueListenable<ClassFilter> filter;
-  final Function(ClassFilter) onChanged;
-  final String rootPackage;
+  final ClassFilterData data;
+  final String _rootPackage;
 
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<ClassFilter>(
-      valueListenable: filter,
+      valueListenable: data.filter,
       builder: (context, filter, _) {
         return FilterButton(
           key: Key(WidgetKeys.filterClassesAndPackagesButton.id),
@@ -51,8 +47,8 @@ class ClassFilterButton extends StatelessWidget {
                 context: context,
                 builder: (context) => ClassFilterDialog(
                   filter,
-                  onChanged: onChanged,
-                  rootPackage: rootPackage,
+                  onChanged: data.onChanged,
+                  rootPackage: _rootPackage,
                 ),
               ),
             );
@@ -125,6 +121,7 @@ class _ClassFilterDialogState extends State<ClassFilterDialog> {
     Widget textField(TextEditingController controller) => Padding(
           padding: EdgeInsets.only(left: textFieldLeftPadding),
           child: TextField(
+            decoration: dialogTextFieldDecoration,
             keyboardType: TextInputType.multiline,
             maxLines: null,
             controller: controller,

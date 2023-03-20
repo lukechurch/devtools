@@ -8,7 +8,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-import 'mocks/mocks.dart';
+import 'mocks/generated.mocks.dart';
 
 /// The RouterDelegate must use the same NavigatorKey when building in order
 /// for widget state to be preserved.
@@ -21,7 +21,14 @@ final _testNavigatorKey = GlobalKey<NavigatorState>();
 /// [Directionality] to support [RenderFlex] widgets like [Row] and [Column].
 Widget wrap(Widget widget) {
   return MaterialApp.router(
-    theme: themeFor(isDarkTheme: false, ideTheme: IdeTheme()),
+    theme: themeFor(
+      isDarkTheme: false,
+      ideTheme: IdeTheme(),
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: lightColorScheme,
+      ),
+    ),
     routerDelegate: DevToolsRouterDelegate(
       (context, page, args, state) => MaterialPage(
         child: Material(

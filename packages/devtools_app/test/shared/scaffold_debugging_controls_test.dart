@@ -22,7 +22,6 @@ import 'package:mockito/mockito.dart';
 void main() {
   final mockServiceManager = MockServiceConnectionManager();
   when(mockServiceManager.service).thenReturn(null);
-  when(mockServiceManager.connectedAppInitialized).thenReturn(false);
   when(mockServiceManager.connectedState).thenReturn(
     ValueNotifier<ConnectedState>(const ConnectedState(false)),
   );
@@ -46,11 +45,15 @@ void main() {
   testWidgets(
     'displays floating debugger controls',
     (WidgetTester tester) async {
-      final mockConnectedApp = MockConnectedAppLegacy();
-      when(mockConnectedApp.isFlutterAppNow).thenReturn(true);
-      when(mockConnectedApp.isProfileBuildNow).thenReturn(false);
+      final connectedApp = MockConnectedApp();
+      mockConnectedApp(
+        connectedApp,
+        isFlutterApp: true,
+        isProfileBuild: false,
+        isWebApp: false,
+      );
       when(mockServiceManager.connectedAppInitialized).thenReturn(true);
-      when(mockServiceManager.connectedApp).thenReturn(mockConnectedApp);
+      when(mockServiceManager.connectedApp).thenReturn(connectedApp);
       when(mockServiceManager.isolateManager).thenReturn(FakeIsolateManager());
       when(mockServiceManager.appState).thenReturn(
         AppState(mockServiceManager.isolateManager.selectedIsolate),
@@ -58,15 +61,12 @@ void main() {
       final mockDebuggerController = MockDebuggerController();
       final state =
           serviceManager.isolateManager.mainIsolateState! as MockIsolateState;
-      state.isPaused.value = true;
+      when(state.isPaused).thenReturn(ValueNotifier(true));
       when(mockServiceManager.isMainIsolatePaused).thenReturn(false);
 
       await tester.pumpWidget(
         wrapWithControllers(
-          DevToolsScaffold(
-            screens: const [_screen1, _screen2],
-            ideTheme: IdeTheme(),
-          ),
+          const DevToolsScaffold(screens: [_screen1, _screen2]),
           debugger: mockDebuggerController,
           analytics: AnalyticsController(enabled: false, firstRun: false),
         ),

@@ -79,6 +79,9 @@ class _ChartControlPaneState extends State<ChartControlPane>
                   onResume: _onResume,
                   pauseTooltip: ChartPaneTooltips.pauseTooltip,
                   resumeTooltip: ChartPaneTooltips.resumeTooltip,
+                  gaScreen: gac.memory,
+                  gaSelectionPause: gac.MemoryEvent.pauseChart,
+                  gaSelectionResume: gac.MemoryEvent.resumeChart,
                 );
               },
             ),
@@ -87,6 +90,8 @@ class _ChartControlPaneState extends State<ChartControlPane>
               onPressed: _clearTimeline,
               minScreenWidthForTextBeforeScaling: memoryControlsMinVerboseWidth,
               tooltip: 'Clear memory chart.',
+              gaScreen: gac.memory,
+              gaSelection: gac.MemoryEvent.clearChart,
             ),
           ],
         ),
@@ -94,6 +99,7 @@ class _ChartControlPaneState extends State<ChartControlPane>
         Row(
           children: [
             _LegendButton(chartController: widget.chartController),
+            const SizedBox(width: denseSpacing),
             const _ChartHelpLink(),
           ],
         ),
@@ -113,17 +119,13 @@ class _LegendButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return ValueListenableBuilder<bool>(
       valueListenable: chartController.legendVisibleNotifier,
-      builder: (_, legendVisible, __) => IconLabelButton(
+      builder: (_, legendVisible, __) => DevToolsButton(
         key: Key(WidgetKeys.toggleMemoryChartLegendButton.id),
-        onPressed: () {
-          chartController.toggleLegendVisibility();
-          if (legendVisible) {
-            ga.select(
-              gac.memory,
-              gac.MemoryEvent.chartLegend,
-            );
-          }
-        },
+        onPressed: chartController.toggleLegendVisibility,
+        gaScreen: gac.memory,
+        gaSelection: legendVisible
+            ? gac.MemoryEvent.hideChartLegend
+            : gac.MemoryEvent.showChartLegend,
         icon: legendVisible ? Icons.close : Icons.storage,
         label: 'Legend',
         tooltip: 'Toggle visibility of the chart legend',

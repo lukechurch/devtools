@@ -5,7 +5,7 @@
 import 'dart:async';
 
 import 'package:devtools_app/devtools_app.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:mockito/mockito.dart';
 import 'package:vm_service/vm_service.dart' hide TimelineEvent;
 
@@ -43,6 +43,9 @@ MockPerformanceController createMockPerformanceControllerWithDefaults() {
       .thenReturn(ValueNotifier<bool>(true));
   when(timelineEventsController.legacyController)
       .thenReturn(legacyTimelineEventsController);
+  when(timelineEventsController.status).thenReturn(
+    ValueNotifier<EventsControllerStatus>(EventsControllerStatus.empty),
+  );
   when(legacyTimelineEventsController.searchMatches)
       .thenReturn(const FixedValueListenable<List<TimelineEvent>>([]));
   when(legacyTimelineEventsController.searchInProgressNotifier)
@@ -148,4 +151,27 @@ MockVmServiceWrapper createMockVmServiceWrapperWithDefaults() {
     return const Stream.empty();
   });
   return service;
+}
+
+MockLoggingController createMockLoggingControllerWithDefaults({
+  List<LogData> data = const [],
+}) {
+  final mockLoggingController = MockLoggingController();
+  when(mockLoggingController.data).thenReturn(data);
+  when(mockLoggingController.filteredData)
+      .thenReturn(ListValueNotifier<LogData>(data));
+  when(mockLoggingController.isFilterActive).thenReturn(false);
+  when(mockLoggingController.selectedLog)
+      .thenReturn(ValueNotifier<LogData?>(null));
+  when(mockLoggingController.searchFieldFocusNode).thenReturn(FocusNode());
+  when(mockLoggingController.searchTextFieldController)
+      .thenReturn(SearchTextEditingController());
+  when(mockLoggingController.searchMatches)
+      .thenReturn(const FixedValueListenable(<LogData>[]));
+  when(mockLoggingController.activeSearchMatch)
+      .thenReturn(const FixedValueListenable<LogData?>(null));
+  when(mockLoggingController.searchInProgressNotifier)
+      .thenReturn(const FixedValueListenable(false));
+  when(mockLoggingController.matchIndex).thenReturn(ValueNotifier<int>(0));
+  return mockLoggingController;
 }

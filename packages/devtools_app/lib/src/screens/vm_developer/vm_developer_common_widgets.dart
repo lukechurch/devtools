@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:stack_trace/stack_trace.dart' as stack_trace;
 import 'package:vm_service/vm_service.dart';
 
+import '../../shared/analytics/constants.dart' as gac;
 import '../../shared/common_widgets.dart';
 import '../../shared/globals.dart';
 import '../../shared/primitives/utils.dart';
@@ -81,23 +82,20 @@ MapEntry<String, WidgetBuilder> selectableTextBuilderMapEntry(
   );
 }
 
-MapEntry<String, WidgetBuilder>
-    serviceObjectLinkBuilderMapEntry<T extends ObjRef>({
+MapEntry<String, WidgetBuilder> serviceObjectLinkBuilderMapEntry({
   required ObjectInspectorViewController controller,
   required String key,
-  required T object,
+  required Response? object,
   bool preferUri = false,
-  String Function(T)? textBuilder,
+  String Function(Response?)? textBuilder,
 }) {
   return MapEntry(
     key,
-    (context) => VmServiceObjectLink<T>(
+    (context) => VmServiceObjectLink(
       object: object,
       textBuilder: textBuilder,
       preferUri: preferUri,
-      onTap: (object) async {
-        await controller.findAndSelectNodeForObject(object);
-      },
+      onTap: controller.findAndSelectNodeForObject,
     ),
   );
 }
@@ -124,7 +122,7 @@ class VMInfoList extends StatelessWidget {
       children: [
         AreaPaneHeader(
           title: Text(title),
-          needsTopBorder: false,
+          includeTopBorder: false,
         ),
         if (rowKeyValues != null)
           Expanded(
@@ -179,17 +177,6 @@ Widget _buildAlternatingRow(BuildContext context, int index, Widget row) {
   );
 }
 
-/// An IconLabelButton with label 'Request' and a 'call made' icon.
-class RequestDataButton extends IconLabelButton {
-  RequestDataButton({
-    Key? key,
-    required super.onPressed,
-    super.icon = Icons.call_made,
-    super.label = 'Request',
-    super.outlined = false,
-  }) : super(key: key);
-}
-
 /// Displays a RequestDataButton if the data provided by [sizeProvider] is null,
 /// otherwise displays the size data and a ToolbarRefresh button next
 /// to it, to request that data again if required.
@@ -223,7 +210,14 @@ class RequestableSizeWidget extends StatelessWidget {
         } else {
           final size = sizeProvider();
           return size == null
-              ? RequestDataButton(onPressed: requestFunction)
+              ? DevToolsButton(
+                  icon: Icons.call_made,
+                  label: 'Request',
+                  outlined: false,
+                  gaScreen: gac.vmTools,
+                  gaSelection: gac.requestSize,
+                  onPressed: requestFunction,
+                )
               : Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -332,15 +326,11 @@ class VmExpansionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final titleRow = AreaPaneHeader(
       title: Text(title),
-      needsTopBorder: false,
-      needsBottomBorder: false,
-      // We'll set the color in the Card so the InkWell shows a consistent
-      // color when the user hovers over the ExpansionTile.
-      backgroundColor: Colors.transparent,
+      includeTopBorder: false,
+      includeBottomBorder: false,
     );
     final theme = Theme.of(context);
     return Card(
-      color: theme.titleSolidBackgroundColor,
       child: ListTileTheme(
         data: ListTileTheme.of(context).copyWith(
           dense: true,
@@ -372,6 +362,42 @@ class SizedCircularProgressIndicator extends StatelessWidget {
         2 * (defaultIconSizeBeforeScaling + denseSpacing),
       ),
       child: const CenteredCircularProgressIndicator(),
+    );
+  }
+}
+
+class ExpansionTileInstanceList extends StatelessWidget {
+  const ExpansionTileInstanceList({
+    required this.controller,
+    required this.title,
+    required this.elements,
+  });
+
+  final ObjectInspectorViewController controller;
+  final String title;
+  final List<Response?> elements;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final children = <Row>[
+      for (int i = 0; i < elements.length; ++i)
+        Row(
+          children: [
+            Text(
+              '[$i]: ',
+              style: theme.subtleFixedFontStyle,
+            ),
+            VmServiceObjectLink(
+              object: elements[i],
+              onTap: controller.findAndSelectNodeForObject,
+            ),
+          ],
+        ),
+    ];
+    return VmExpansionTile(
+      title: '$title (${elements.length})',
+      children: prettyRows(context, children),
     );
   }
 }
@@ -692,92 +718,112 @@ class InboundReferencesWidget extends StatelessWidget {
   }
 }
 
-class VmServiceObjectLink<T> extends StatelessWidget {
+class VmServiceObjectLink extends StatelessWidget {
   const VmServiceObjectLink({
     required this.object,
     required this.onTap,
-    this.isSelected = false,
     this.preferUri = false,
     this.textBuilder,
   });
 
-  final T object;
+  final Response? object;
   final bool preferUri;
-  final String? Function(T)? textBuilder;
-  final FutureOr<void> Function(T) onTap;
-  final bool isSelected;
+  final String? Function(Response?)? textBuilder;
+  final FutureOr<void> Function(ObjRef) onTap;
+
+  @visibleForTesting
+  static String? defaultTextBuilder(
+    Object? object, {
+    bool preferUri = false,
+  }) {
+    String? text;
+    if (object is LibraryRef) {
+      final lib = object;
+      if (lib.uri!.startsWith('dart') || preferUri) {
+        text = lib.uri!;
+      } else {
+        final name = lib.name;
+        text = name!.isEmpty ? lib.uri! : name;
+      }
+    } else if (object is FieldRef) {
+      final field = object;
+      text = field.name!;
+    } else if (object is FuncRef) {
+      final func = object;
+      text = func.name!;
+    } else if (object is ScriptRef) {
+      final script = object;
+      text = script.uri!;
+    } else if (object is ClassRef) {
+      final cls = object;
+      text = cls.name!;
+    } else if (object is CodeRef) {
+      final code = object;
+      text = code.name!;
+    } else if (object is InstanceRef) {
+      final instance = object;
+      if (instance.kind == InstanceKind.kList) {
+        text = 'List(length: ${instance.length})';
+      } else if (instance.kind == InstanceKind.kMap) {
+        text = 'Map(length: ${instance.length})';
+      } else if (instance.kind == InstanceKind.kRecord) {
+        text = 'Record';
+      } else if (instance.kind == InstanceKind.kType ||
+          instance.kind == InstanceKind.kTypeParameter) {
+        text = instance.name!;
+      } else if (instance.kind == InstanceKind.kStackTrace) {
+        final trace = stack_trace.Trace.parse(instance.valueAsString!);
+        final depth = trace.frames.length;
+        text = 'StackTrace ($depth ${pluralize('frame', depth)})';
+      } else {
+        if (instance.valueAsString != null) {
+          text = instance.valueAsString!;
+        } else {
+          final cls = instance.classRef!;
+          text = '${cls.name}';
+        }
+      }
+    } else if (object is ContextRef) {
+      final context = object;
+      text = 'Context(length: ${context.length})';
+    } else if (object is TypeArgumentsRef) {
+      final typeArgs = object;
+      text = typeArgs.name!;
+    } else if (object is Sentinel) {
+      final sentinel = object;
+      text = 'Sentinel ${sentinel.valueAsString!}';
+    } else if (object != null && object is ObjRef && object.isICData) {
+      final icData = object.asICData;
+      text = 'ICData(${icData.selector})';
+    } else if (object != null && object is ObjRef && object.isObjectPool) {
+      final objectPool = object.asObjectPool;
+      text = 'Object Pool(length: ${objectPool.length})';
+    } else if (object != null &&
+        object is ObjRef &&
+        object.isSubtypeTestCache) {
+      text = 'SubtypeTestCache';
+    } else if (object != null && object is ObjRef && object.isWeakArray) {
+      final weakArray = object.asWeakArray;
+      text = 'WeakArray(length: ${weakArray.length})';
+    }
+    return text;
+  }
 
   TextSpan buildTextSpan(BuildContext context) {
     final theme = Theme.of(context);
 
-    String? text = textBuilder?.call(object);
-    bool isServiceObject = true;
-    if (text == null) {
-      if (object is LibraryRef) {
-        final lib = object as LibraryRef;
-        if (lib.uri!.startsWith('dart') || preferUri) {
-          text = lib.uri!;
-        } else {
-          final name = lib.name;
-          text = name!.isEmpty ? lib.uri! : name;
-        }
-      } else if (object is FieldRef) {
-        final field = object as FieldRef;
-        text = field.name!;
-      } else if (object is FuncRef) {
-        final func = object as FuncRef;
-        text = func.name!;
-      } else if (object is ScriptRef) {
-        final script = object as ScriptRef;
-        text = script.uri!;
-      } else if (object is ClassRef) {
-        final cls = object as ClassRef;
-        text = cls.name!;
-      } else if (object is CodeRef) {
-        final code = object as CodeRef;
-        text = code.name!;
-      } else if (object is InstanceRef) {
-        final instance = object as InstanceRef;
-        if (instance.kind == InstanceKind.kList) {
-          text = 'List(length: ${instance.length})';
-        } else if (instance.kind == InstanceKind.kMap) {
-          text = 'Map(length: ${instance.length})';
-        } else if (instance.kind == InstanceKind.kRecord) {
-          text = 'Record';
-        } else if (instance.kind == InstanceKind.kType) {
-          text = instance.name!;
-        } else if (instance.kind == InstanceKind.kStackTrace) {
-          final trace = stack_trace.Trace.parse(instance.valueAsString!);
-          final depth = trace.frames.length;
-          text = 'StackTrace ($depth ${pluralize('frame', depth)})';
-        } else {
-          if (instance.valueAsString != null) {
-            text = instance.valueAsString!;
-          } else {
-            final cls = instance.classRef!;
-            text = '${cls.name}';
-          }
-        }
-      } else if (object is ContextRef) {
-        final context = object as ContextRef;
-        text = 'Context(length: ${context.length})';
-      } else if (object is TypeArgumentsRef) {
-        final typeArgs = object as TypeArgumentsRef;
-        text = typeArgs.name!;
-      } else if (object is Sentinel) {
-        final sentinel = object as Sentinel;
-        text = sentinel.valueAsString!;
-      } else {
-        isServiceObject = false;
-        text = object.toString();
-      }
-    }
+    String? text = textBuilder?.call(object) ??
+        defaultTextBuilder(object, preferUri: preferUri);
+
+    // Sentinels aren't objects that can be inspected.
+    final isServiceObject = object is! Sentinel && text != null;
+    text ??= object.toString();
 
     final TextStyle style;
     if (isServiceObject) {
-      style = isSelected ? theme.selectedLinkTextStyle : theme.linkTextStyle;
+      style = theme.fixedFontLinkStyle;
     } else {
-      style = isSelected ? theme.selectedFixedFontStyle : theme.fixedFontStyle;
+      style = theme.fixedFontStyle;
     }
     return TextSpan(
       text: text,
@@ -785,7 +831,10 @@ class VmServiceObjectLink<T> extends StatelessWidget {
       recognizer: isServiceObject
           ? (TapGestureRecognizer()
             ..onTap = () async {
-              await onTap(object);
+              final obj = object;
+              if (obj is ObjRef) {
+                await onTap(obj);
+              }
             })
           : null,
     );
@@ -934,25 +983,25 @@ List<MapEntry<String, WidgetBuilder>> vmObjectGeneralDataRows(
     reachableSizeRowBuilder(object),
     retainedSizeRowBuilder(object),
     if (object is ClassObject)
-      serviceObjectLinkBuilderMapEntry<LibraryRef>(
+      serviceObjectLinkBuilderMapEntry(
         controller: controller,
         key: 'Library',
         object: object.obj.library!,
       ),
     if (object is ScriptObject)
-      serviceObjectLinkBuilderMapEntry<LibraryRef>(
+      serviceObjectLinkBuilderMapEntry(
         controller: controller,
         key: 'Library',
         object: object.obj.library!,
       ),
     if (object is FieldObject)
-      serviceObjectLinkBuilderMapEntry<ObjRef>(
+      serviceObjectLinkBuilderMapEntry(
         controller: controller,
         key: 'Owner',
         object: object.obj.owner!,
       ),
     if (object is FuncObject)
-      serviceObjectLinkBuilderMapEntry<ObjRef>(
+      serviceObjectLinkBuilderMapEntry(
         controller: controller,
         key: 'Owner',
         object: object.obj.owner!,
@@ -960,11 +1009,12 @@ List<MapEntry<String, WidgetBuilder>> vmObjectGeneralDataRows(
     if (object is! ScriptObject &&
         object is! LibraryObject &&
         object.script != null)
-      serviceObjectLinkBuilderMapEntry<ScriptRef>(
+      serviceObjectLinkBuilderMapEntry(
         controller: controller,
         key: 'Script',
         object: object.script!,
-        textBuilder: (script) {
+        textBuilder: (s) {
+          final script = s as ScriptRef;
           return '${fileNameFromUri(script.uri) ?? ''}:${object.pos?.toString() ?? ''}';
         },
       ),

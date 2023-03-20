@@ -2,14 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:devtools_app/src/screens/debugger/breakpoint_manager.dart';
-import 'package:devtools_app/src/screens/vm_developer/object_inspector/object_inspector_view_controller.dart';
+import 'package:devtools_app/devtools_app.dart';
 import 'package:devtools_app/src/screens/vm_developer/object_inspector/vm_function_display.dart';
 import 'package:devtools_app/src/screens/vm_developer/vm_developer_common_widgets.dart';
-import 'package:devtools_app/src/screens/vm_developer/vm_service_private_extensions.dart';
-import 'package:devtools_app/src/service/service_manager.dart';
-import 'package:devtools_app/src/shared/config_specific/ide_theme/ide_theme.dart';
-import 'package:devtools_app/src/shared/globals.dart';
 import 'package:devtools_test/devtools_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,6 +25,8 @@ void main() {
     setGlobal(BreakpointManager, BreakpointManager());
     setGlobal(IdeTheme, IdeTheme());
     setGlobal(ServiceConnectionManager, FakeServiceManager());
+    setGlobal(DevToolsExtensionPoints, ExternalDevToolsExtensionPoints());
+    setGlobal(PreferencesController, PreferencesController());
 
     mockFuncObject = MockFuncObject();
 
@@ -50,6 +47,13 @@ void main() {
     when(mockFuncObject.isRecognized).thenReturn(false);
     when(mockFuncObject.isNative).thenReturn(null);
     when(mockFuncObject.vmName).thenReturn('fooDartFunction');
+    when(mockFuncObject.icDataArray).thenReturn(
+      Instance(
+        id: 'ic-data-array-id',
+        length: 0,
+        elements: [],
+      ),
+    );
   });
 
   group('function display test', () {
@@ -95,10 +99,9 @@ void main() {
         expect(find.text('fooDartFunction'), findsOneWidget);
 
         expect(find.byType(RequestableSizeWidget), findsNWidgets(2));
-
         expect(find.byType(RetainingPathWidget), findsOneWidget);
-
         expect(find.byType(InboundReferencesWidget), findsOneWidget);
+        expect(find.byType(CallSiteDataArrayWidget), findsOneWidget);
       },
     );
 

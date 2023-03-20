@@ -135,23 +135,32 @@ class HttpRequestView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final requestHeaders = data.requestHeaders;
-    final requestContentType = requestHeaders?['content-type'] ?? '';
-    Widget child;
-    if (requestContentType.contains('json')) {
-      child = JsonViewer(encodedJson: data.requestBody!);
-    } else {
-      child = Text(
-        data.requestBody!,
-        style: theme.fixedFontStyle,
-      );
-    }
-    return Padding(
-      padding: const EdgeInsets.all(denseSpacing),
-      child: SingleChildScrollView(
-        child: child,
-      ),
+    return ValueListenableBuilder(
+      valueListenable: data.requestUpdatedNotifier,
+      builder: (context, __, ___) {
+        final theme = Theme.of(context);
+        final requestHeaders = data.requestHeaders;
+        final requestContentType = requestHeaders?['content-type'] ?? '';
+        final isLoading = data.isFetchingFullData;
+        if (isLoading) {
+          return CenteredCircularProgressIndicator(
+            size: mediumProgressSize,
+          );
+        }
+        Widget child;
+        child = (requestContentType.contains('json'))
+            ? JsonViewer(encodedJson: data.requestBody!)
+            : Text(
+                data.requestBody!,
+                style: theme.fixedFontStyle,
+              );
+        return Padding(
+          padding: const EdgeInsets.all(denseSpacing),
+          child: SingleChildScrollView(
+            child: child,
+          ),
+        );
+      },
     );
   }
 }
@@ -163,28 +172,39 @@ class HttpResponseView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget child;
-    final theme = Theme.of(context);
-    // We shouldn't try and display an image response view when using the
-    // timeline profiler since it's possible for response body data to get
-    // dropped.
-    final contentType = data.contentType;
-    final responseBody = data.responseBody!;
-    if (contentType != null && contentType.contains('image')) {
-      child = ImageResponseView(data);
-    } else if (contentType != null &&
-        contentType.contains('json') &&
-        responseBody.isNotEmpty) {
-      child = JsonViewer(encodedJson: responseBody);
-    } else {
-      child = Text(
-        responseBody,
-        style: theme.fixedFontStyle,
-      );
-    }
-    return Padding(
-      padding: const EdgeInsets.all(denseSpacing),
-      child: SingleChildScrollView(child: child),
+    return ValueListenableBuilder(
+      valueListenable: data.requestUpdatedNotifier,
+      builder: (context, __, ___) {
+        Widget child;
+        final theme = Theme.of(context);
+        // We shouldn't try and display an image response view when using the
+        // timeline profiler since it's possible for response body data to get
+        // dropped.
+        final contentType = data.contentType;
+        final responseBody = data.responseBody!;
+        final isLoading = data.isFetchingFullData;
+        if (isLoading) {
+          return CenteredCircularProgressIndicator(
+            size: mediumProgressSize,
+          );
+        }
+        if (contentType != null && contentType.contains('image')) {
+          child = ImageResponseView(data);
+        } else if (contentType != null &&
+            contentType.contains('json') &&
+            responseBody.isNotEmpty) {
+          child = JsonViewer(encodedJson: responseBody);
+        } else {
+          child = Text(
+            responseBody,
+            style: theme.fixedFontStyle,
+          );
+        }
+        return Padding(
+          padding: const EdgeInsets.all(denseSpacing),
+          child: SingleChildScrollView(child: child),
+        );
+      },
     );
   }
 }
@@ -361,7 +381,8 @@ class HttpRequestCookiesView extends StatelessWidget {
                     ),
               child: DataTable(
                 key: key,
-                dataRowHeight: defaultRowHeight,
+                dataRowMinHeight: defaultRowHeight,
+                dataRowMaxHeight: defaultRowHeight,
                 // NOTE: if this list of columns change, _buildRow will need
                 // to be updated to match.
                 columns: [
@@ -502,8 +523,9 @@ class NetworkRequestOverviewView extends StatelessWidget {
       _buildRow(
         context: context,
         title: 'Timing',
-        child:
-            data is WebSocket ? _buildSocketTimeGraph() : _buildHttpTimeGraph(),
+        child: data is WebSocket
+            ? _buildSocketTimeGraph(context)
+            : _buildHttpTimeGraph(),
       ),
       const SizedBox(height: denseSpacing),
       _buildRow(
@@ -654,11 +676,11 @@ class NetworkRequestOverviewView extends StatelessWidget {
     ];
   }
 
-  Widget _buildSocketTimeGraph() {
+  Widget _buildSocketTimeGraph(BuildContext context) {
     return Container(
       key: socketTimingGraphKey,
       height: _timingGraphHeight,
-      color: mainUiColor,
+      color: Theme.of(context).colorScheme.primary,
     );
   }
 

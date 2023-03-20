@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import 'dart:async';
-import 'dart:developer';
 
 import 'package:flutter/material.dart';
 
@@ -13,17 +12,19 @@ import '../../shared/common_widgets.dart';
 import '../../shared/dialogs.dart';
 import '../../shared/globals.dart';
 import '../../shared/primitives/auto_dispose.dart';
+import '../../shared/primitives/utils.dart';
 import '../../shared/theme.dart';
 import '../../shared/ui/colors.dart';
-import '../../shared/ui/filter.dart';
 import '../../shared/ui/search.dart';
 import '../../shared/ui/tab.dart';
 import '../../shared/utils.dart';
-import 'cpu_profile_bottom_up.dart';
-import 'cpu_profile_call_tree.dart';
 import 'cpu_profile_controller.dart';
-import 'cpu_profile_flame_chart.dart';
 import 'cpu_profile_model.dart';
+import 'panes/bottom_up.dart';
+import 'panes/call_tree.dart';
+import 'panes/controls/profiler_controls.dart';
+import 'panes/cpu_flame_chart.dart';
+import 'panes/method_table/method_table.dart';
 
 // TODO(kenz): provide useful UI upon selecting a CPU stack frame.
 
@@ -39,11 +40,10 @@ class CpuProfiler extends StatefulWidget {
         tabs = [
           if (summaryView != null)
             _buildTab(key: summaryTab, tabName: 'Summary'),
-          if (!data.isEmpty) ...[
-            _buildTab(key: bottomUpTab, tabName: 'Bottom Up'),
-            _buildTab(key: callTreeTab, tabName: 'Call Tree'),
-            _buildTab(key: flameChartTab, tabName: 'CPU Flame Chart'),
-          ],
+          _buildTab(key: bottomUpTab, tabName: 'Bottom Up'),
+          _buildTab(key: callTreeTab, tabName: 'Call Tree'),
+          _buildTab(key: methodTableTab, tabName: 'Method Table'),
+          _buildTab(key: flameChartTab, tabName: 'CPU Flame Chart'),
         ];
 
   static DevToolsTab _buildTab({Key? key, required String tabName}) {
@@ -72,12 +72,14 @@ class CpuProfiler extends StatefulWidget {
 
   static const Key dataProcessingKey = Key('CpuProfiler - data is processing');
 
-  // When content of the selected DevToolsTab from the tab controller has this key,
-  // we will not show the expand/collapse buttons.
+  // When content of the selected DevToolsTab from the tab controller has any
+  // of these three keys, we will not show the expand/collapse buttons.
   static const Key flameChartTab = Key('cpu profile flame chart tab');
-  static const Key callTreeTab = Key('cpu profile call tree tab');
-  static const Key bottomUpTab = Key('cpu profile bottom up tab');
+  static const Key methodTableTab = Key('cpu profile method table tab');
   static const Key summaryTab = Key('cpu profile summary tab');
+
+  static const Key bottomUpTab = Key('cpu profile bottom up tab');
+  static const Key callTreeTab = Key('cpu profile call tree tab');
 
   @override
   _CpuProfilerState createState() => _CpuProfilerState();
@@ -95,6 +97,9 @@ class _CpuProfilerState extends State<CpuProfiler>
   late TabController _tabController;
 
   late CpuProfileData data;
+
+  @override
+  SearchControllerMixin get searchController => widget.controller;
 
   @override
   void initState() {
@@ -151,20 +156,15 @@ class _CpuProfilerState extends State<CpuProfiler>
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
     final colorScheme = theme.colorScheme;
-    if (widget.tabs.isEmpty) {
-      return Container();
-    }
     final currentTab = widget.tabs[_tabController.index];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         AreaPaneHeader(
-          needsTopBorder: false,
           leftPadding: 0,
           tall: true,
           title: TabBar(
-            labelColor:
-                textTheme.bodyLarge?.color ?? colorScheme.defaultForeground,
+            labelColor: textTheme.bodyLarge?.color ?? colorScheme.onSurface,
             isScrollable: true,
             controller: _tabController,
             tabs: widget.tabs,
@@ -173,10 +173,11 @@ class _CpuProfilerState extends State<CpuProfiler>
             if (currentTab.key != CpuProfiler.summaryTab) ...[
               FilterButton(
                 onPressed: _showFilterDialog,
-                isFilterActive: widget.controller.isToggleFilterActive,
+                isFilterActive: widget.controller.isFilterActive,
               ),
               const SizedBox(width: denseSpacing),
-              if (currentTab.key != CpuProfiler.flameChartTab) ...[
+              if (currentTab.key != CpuProfiler.flameChartTab &&
+                  currentTab.key != CpuProfiler.methodTableTab) ...[
                 const DisplayTreeGuidelinesToggle(),
                 const SizedBox(width: denseSpacing),
               ],
@@ -198,7 +199,7 @@ class _CpuProfilerState extends State<CpuProfiler>
             // TODO(kenz): support search for call tree and bottom up tabs as
             // well. This will require implementing search for tree tables.
             if (currentTab.key == CpuProfiler.flameChartTab) ...[
-              if (widget.searchFieldKey != null) _buildSearchField(),
+              _buildSearchField(),
               FlameChartHelpButton(
                 gaScreen: widget.standaloneProfiler
                     ? gac.cpuProfiler
@@ -230,7 +231,8 @@ class _CpuProfilerState extends State<CpuProfiler>
               ),
             ],
             if (currentTab.key != CpuProfiler.flameChartTab &&
-                currentTab.key != CpuProfiler.summaryTab) ...[
+                currentTab.key != CpuProfiler.summaryTab &&
+                currentTab.key != CpuProfiler.methodTableTab) ...[
               // TODO(kenz): add a switch to order samples by user tag here
               // instead of using the filter control. This will allow users
               // to see all the tags side by side in the tree tables.
@@ -258,14 +260,20 @@ class _CpuProfilerState extends State<CpuProfiler>
           valueListenable: widget.controller.viewType,
           builder: (context, viewType, _) {
             return Expanded(
-              child: TabBarView(
-                physics: defaultTabBarViewPhysics,
-                controller: _tabController,
-                children: _buildProfilerViews(),
+              child: OutlineDecoration(
+                showTop: false,
+                showBottom: false,
+                child: TabBarView(
+                  physics: defaultTabBarViewPhysics,
+                  controller: _tabController,
+                  children: _buildProfilerViews(),
+                ),
               ),
             );
           },
         ),
+        if (currentTab.key != CpuProfiler.summaryTab)
+          CpuProfileStats(metadata: data.profileMetaData),
       ],
     );
   }
@@ -285,9 +293,8 @@ class _CpuProfilerState extends State<CpuProfiler>
     return Container(
       width: wideSearchTextWidth,
       height: defaultTextFieldHeight,
-      child: buildSearchField(
+      child: SearchField<CpuStackFrame>(
         controller: widget.controller,
-        searchFieldKey: widget.searchFieldKey!,
         searchFieldEnabled: true,
         shouldRequestFocus: false,
         supportsNavigation: true,
@@ -301,7 +308,7 @@ class _CpuProfilerState extends State<CpuProfiler>
         valueListenable: preferences.cpuProfiler.displayTreeGuidelines,
         builder: (context, displayTreeGuidelines, _) {
           return CpuBottomUpTable(
-            widget.bottomUpRoots,
+            bottomUpRoots: widget.bottomUpRoots,
             displayTreeGuidelines: displayTreeGuidelines,
           );
         },
@@ -312,10 +319,15 @@ class _CpuProfilerState extends State<CpuProfiler>
         valueListenable: preferences.cpuProfiler.displayTreeGuidelines,
         builder: (context, displayTreeGuidelines, _) {
           return CpuCallTreeTable(
-            widget.callTreeRoots,
+            dataRoots: widget.callTreeRoots,
             displayTreeGuidelines: displayTreeGuidelines,
           );
         },
+      ),
+    );
+    final methodTable = KeepAliveWrapper(
+      child: CpuMethodTable(
+        methodTableController: widget.controller.methodTableController,
       ),
     );
     final cpuFlameChart = KeepAliveWrapper(
@@ -337,11 +349,10 @@ class _CpuProfilerState extends State<CpuProfiler>
     // TODO(kenz): make this order configurable.
     return [
       if (summaryView != null) summaryView,
-      if (!data.isEmpty) ...[
-        bottomUp,
-        callTree,
-        cpuFlameChart,
-      ],
+      bottomUp,
+      callTree,
+      methodTable,
+      cpuFlameChart,
     ];
   }
 
@@ -358,228 +369,75 @@ class _CpuProfilerState extends State<CpuProfiler>
   }
 }
 
-class DisplayTreeGuidelinesToggle extends StatelessWidget {
-  const DisplayTreeGuidelinesToggle();
+// TODO(kenz): one improvement we could make on this is to show the denominator
+// for filtered profiles (e.g. 'Sample count: 10/14), or to at least show the
+// original value in the tooltip for each of these stats.
+class CpuProfileStats extends StatelessWidget {
+  CpuProfileStats({required this.metadata});
+
+  final CpuProfileMetaData metadata;
+
+  final _statsRowHeight = scaleByFontFactor(25.0);
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: preferences.cpuProfiler.displayTreeGuidelines,
-      builder: (context, displayTreeGuidelines, _) {
-        return ToggleButton(
-          onPressed: () {
-            preferences.cpuProfiler.displayTreeGuidelines.value =
-                !displayTreeGuidelines;
-          },
-          isSelected: displayTreeGuidelines,
-          message: 'Display guidelines',
-          icon: Icons.stacked_bar_chart,
-        );
-      },
-    );
-  }
-}
-
-class CpuProfileFilterDialog extends StatelessWidget {
-  CpuProfileFilterDialog({
-    required this.controller,
-    Key? key,
-  })  : oldToggleFilterValues = List.generate(
-          controller.toggleFilters.length,
-          (index) => controller.toggleFilters[index].enabled.value,
+    final theme = Theme.of(context);
+    final samplePeriodValid = metadata.samplePeriod > 0;
+    final samplingPeriodDisplay = samplePeriodValid
+        ? const Duration(seconds: 1).inMicroseconds ~/ metadata.samplePeriod
+        : '--';
+    return RoundedOutlinedBorder.onlyBottom(
+      child: Container(
+        height: _statsRowHeight,
+        padding: const EdgeInsets.symmetric(
+          vertical: densePadding,
+          horizontal: defaultSpacing,
         ),
-        super(key: key);
-
-  double get _filterDialogWidth => scaleByFontFactor(400.0);
-
-  final CpuProfilerController controller;
-
-  final List<bool> oldToggleFilterValues;
-
-  @override
-  Widget build(BuildContext context) {
-    return FilterDialog<CpuProfilerController, CpuStackFrame>(
-      includeQueryFilter: false,
-      dialogWidth: _filterDialogWidth,
-      controller: controller,
-      onCancel: restoreOldValues,
-      toggleFilters: controller.toggleFilters,
-    );
-  }
-
-  void restoreOldValues() {
-    for (var i = 0; i < controller.toggleFilters.length; i++) {
-      final filter = controller.toggleFilters[i];
-      filter.enabled.value = oldToggleFilterValues[i];
-    }
-  }
-}
-
-class CpuProfilerDisabled extends StatelessWidget {
-  const CpuProfilerDisabled(this.controller);
-
-  final CpuProfilerController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          const Text('CPU profiler is disabled.'),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: ElevatedButton(
-              onPressed: controller.enableCpuProfiler,
-              child: const Text('Enable profiler'),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _stat(
+              tooltip: 'The duration of time spanned by the CPU samples',
+              text: 'Duration: ${msText(metadata.time!.duration)}',
+              theme: theme,
             ),
-          ),
-        ],
+            _stat(
+              tooltip: 'The number of samples included in the profile',
+              text: 'Sample count: ${metadata.sampleCount}',
+              theme: theme,
+            ),
+            _stat(
+              tooltip:
+                  'The frequency at which samples are collected by the profiler'
+                  '${samplePeriodValid ? ' (once every ${metadata.samplePeriod} micros)' : ''}',
+              text: 'Sampling rate: $samplingPeriodDisplay Hz',
+              theme: theme,
+            ),
+            _stat(
+              tooltip: 'The maximum stack trace depth of a collected sample',
+              text: 'Sampling depth: ${metadata.stackDepth}',
+              theme: theme,
+            ),
+          ],
+        ),
       ),
     );
   }
-}
 
-/// DropdownButton that controls the value of
-/// [ProfilerScreenController.userTagFilter].
-class UserTagDropdown extends StatelessWidget {
-  const UserTagDropdown(this.controller);
-
-  final CpuProfilerController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    const filterByTag = 'Filter by tag:';
-    return ValueListenableBuilder<String>(
-      valueListenable: controller.userTagFilter,
-      builder: (context, userTag, _) {
-        final userTags = controller.userTags;
-        final tooltip = userTags.isNotEmpty
-            ? 'Filter the CPU profile by the given UserTag'
-            : 'No UserTags found for this CPU profile';
-        return SizedBox(
-          height: defaultButtonHeight,
-          child: DevToolsTooltip(
-            message: tooltip,
-            child: ValueListenableBuilder<bool>(
-              valueListenable: preferences.vmDeveloperModeEnabled,
-              builder: (context, vmDeveloperModeEnabled, _) {
-                return RoundedDropDownButton<String>(
-                  isDense: true,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                  value: userTag,
-                  items: [
-                    _buildMenuItem(
-                      display:
-                          '$filterByTag ${CpuProfilerController.userTagNone}',
-                      value: CpuProfilerController.userTagNone,
-                    ),
-                    // We don't want to show the 'Default' tag if it is the only
-                    // tag available. The 'none' tag above is equivalent in this
-                    // case.
-                    if (!(userTags.length == 1 &&
-                        userTags.first == UserTag.defaultTag.label)) ...[
-                      for (final tag in userTags)
-                        _buildMenuItem(
-                          display: '$filterByTag $tag',
-                          value: tag,
-                        ),
-                      _buildMenuItem(
-                        display: 'Group by: User Tag',
-                        value: CpuProfilerController.groupByUserTag,
-                      ),
-                    ],
-                    if (vmDeveloperModeEnabled)
-                      _buildMenuItem(
-                        display: 'Group by: VM Tag',
-                        value: CpuProfilerController.groupByVmTag,
-                      ),
-                  ],
-                  onChanged: userTags.isEmpty ||
-                          (userTags.length == 1 &&
-                              userTags.first == UserTag.defaultTag.label)
-                      ? null
-                      : (String? tag) => _onUserTagChanged(tag!),
-                );
-              },
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  DropdownMenuItem<String> _buildMenuItem({
-    required String display,
-    required String value,
+  Widget _stat({
+    required String text,
+    required String tooltip,
+    required ThemeData theme,
   }) {
-    return DropdownMenuItem<String>(
-      value: value,
-      child: Text(display),
-    );
-  }
-
-  void _onUserTagChanged(String newTag) async {
-    try {
-      await controller.loadDataWithTag(newTag);
-    } catch (e) {
-      notificationService.push(e.toString());
-    }
-  }
-}
-
-/// DropdownButton that controls the value of
-/// [ProfilerScreenController.viewType].
-class ModeDropdown extends StatelessWidget {
-  const ModeDropdown(this.controller);
-
-  final CpuProfilerController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    const mode = 'View:';
-    return ValueListenableBuilder<CpuProfilerViewType>(
-      valueListenable: controller.viewType,
-      builder: (context, viewType, _) {
-        final tooltip = viewType == CpuProfilerViewType.function
-            ? 'Display the profile in terms of the Dart call stack '
-                '(i.e., inlined frames are expanded)'
-            : 'Display the profile in terms of native stack frames '
-                '(i.e., inlined frames are not expanded, display code objects '
-                'rather than individual functions)';
-        return SizedBox(
-          height: defaultButtonHeight,
-          child: DevToolsTooltip(
-            message: tooltip,
-            child: RoundedDropDownButton<CpuProfilerViewType>(
-              isDense: true,
-              style: Theme.of(context).textTheme.bodyMedium,
-              value: viewType,
-              items: [
-                _buildMenuItem(
-                  display: '$mode ${CpuProfilerViewType.function}',
-                  value: CpuProfilerViewType.function,
-                ),
-                _buildMenuItem(
-                  display: '$mode ${CpuProfilerViewType.code}',
-                  value: CpuProfilerViewType.code,
-                ),
-              ],
-              onChanged: (type) => controller.updateView(type!),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  DropdownMenuItem<CpuProfilerViewType> _buildMenuItem({
-    required String display,
-    required CpuProfilerViewType value,
-  }) {
-    return DropdownMenuItem<CpuProfilerViewType>(
-      value: value,
-      child: Text(display),
+    return Flexible(
+      child: DevToolsTooltip(
+        message: tooltip,
+        child: Text(
+          text,
+          style: theme.subtleTextStyle,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
     );
   }
 }
