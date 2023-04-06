@@ -18,7 +18,7 @@ TODO: Remove this section if there are not any general updates.
 TODO: Remove this section if there are not any general updates.
 
 ## Memory updates
-TODO: Remove this section if there are not any general updates.
+* Add a sidebar panel with help instructions in the Diff tab
 
 ## Debugger updates
 TODO: Remove this section if there are not any general updates.

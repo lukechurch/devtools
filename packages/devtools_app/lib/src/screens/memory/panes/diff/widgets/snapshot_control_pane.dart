@@ -9,6 +9,7 @@ import '../../../../../shared/analytics/constants.dart' as gac;
 import '../../../../../shared/common_widgets.dart';
 import '../../../../../shared/memory/simple_items.dart';
 import '../../../../../shared/primitives/utils.dart';
+import '../../../../../shared/sidebar.dart';
 import '../../../../../shared/theme.dart';
 import '../../../shared/primitives/simple_elements.dart';
 import '../controller/diff_pane_controller.dart';
@@ -45,6 +46,10 @@ class SnapshotControlPane extends StatelessWidget {
                     gaScreen: gac.memory,
                     gaSelection: gac.MemoryEvent.diffSnapshotDownloadCsv,
                     onPressed: controller.downloadCurrentItemToCsv,
+                  ),
+                  const SizedBox(width: defaultSpacing),
+                  _HelpLink(
+                    helpSidebarController: controller.helpSidebarController,
                   ),
                 ],
               ],
@@ -184,6 +189,26 @@ class _SnapshotSizeView extends StatelessWidget {
           .join(' | '),
       overflow: TextOverflow.ellipsis,
       textAlign: TextAlign.right,
+    );
+  }
+}
+
+class _HelpLink extends StatelessWidget {
+  const _HelpLink({
+    Key? key,
+    required this.helpSidebarController,
+  }) : super(key: key);
+
+  static const _documentationTopic = gac.MemoryEvent.diffHelp;
+
+  final SidebarController helpSidebarController;
+
+  @override
+  Widget build(BuildContext context) {
+    return HelpButtonWithCallback(
+      gaScreen: gac.memory,
+      gaSelection: gac.topicDocumentationButton(_documentationTopic),
+      onPressed: () => helpSidebarController.toggleVisibility(true),
     );
   }
 }

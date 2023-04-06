@@ -15,6 +15,7 @@ import '../../../../../shared/globals.dart';
 import '../../../../../shared/memory/class_name.dart';
 import '../../../../../shared/primitives/auto_dispose.dart';
 import '../../../../../shared/primitives/utils.dart';
+import '../../../../../shared/sidebar.dart';
 import '../../../shared/heap/class_filter.dart';
 import '../../../shared/heap/heap.dart';
 import '../../../shared/heap/model.dart';
@@ -34,6 +35,8 @@ class DiffPaneController extends DisposableController {
   final _isTakingSnapshot = ValueNotifier<bool>(false);
 
   final retainingPathController = RetainingPathController();
+
+  final helpSidebarController = SidebarController();
 
   final core = CoreData();
   late final derived = DerivedData(core);

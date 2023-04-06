@@ -8,6 +8,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import '../../../../shared/analytics/constants.dart' as gac;
 import '../../../../shared/common_widgets.dart';
 import '../../../../shared/config_specific/launch_url/launch_url.dart';
+import '../../../../shared/sidebar.dart';
 import '../../../../shared/split.dart';
 import '../../../../shared/theme.dart';
 import '../../shared/primitives/simple_elements.dart';
@@ -24,17 +25,35 @@ class DiffPane extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Split(
-      axis: Axis.horizontal,
-      initialFractions: const [0.1, 0.9],
-      minSizes: const [80, 80],
+    return Row(
       children: [
-        OutlineDecoration.onlyRight(
-          child: SnapshotList(controller: diffController),
+        Expanded(
+          child: Split(
+            axis: Axis.horizontal,
+            initialFractions: const [0.1, 0.9],
+            minSizes: const [80, 80],
+            children: [
+              OutlineDecoration.onlyRight(
+                child: SnapshotList(controller: diffController),
+              ),
+              OutlineDecoration.onlyLeft(
+                child: _SnapshotItemContent(
+                  controller: diffController,
+                ),
+              ),
+            ],
+          ),
         ),
-        OutlineDecoration.onlyLeft(
-          child: _SnapshotItemContent(
-            controller: diffController,
+        Align(
+          child: Sidebar(
+            controller: diffController.helpSidebarController,
+            title: 'Diffing Memory Snapshots Help',
+            child: Expanded(
+              child: Markdown(
+                data: _snapshotDocumentation,
+                onTapLink: (text, url, title) async => await launchUrl(url!),
+              ),
+            ),
           ),
         ),
       ],

@@ -2487,6 +2487,37 @@ class HelpButtonWithDialog extends StatelessWidget {
   }
 }
 
+/// Help button, that calls a callback on click.
+class HelpButtonWithCallback extends StatelessWidget {
+  const HelpButtonWithCallback({
+    required this.gaScreen,
+    required this.gaSelection,
+    required this.onPressed,
+    this.outlined = true,
+  });
+
+  final String gaScreen;
+
+  final String gaSelection;
+
+  final void Function() onPressed;
+
+  final bool outlined;
+
+  @override
+  Widget build(BuildContext context) {
+    return HelpButton(
+      onPressed: () {
+        ga.select(gaScreen, gaSelection);
+        onPressed();
+      },
+      gaScreen: gaScreen,
+      gaSelection: gaSelection,
+      outlined: outlined,
+    );
+  }
+}
+
 /// Display a single bullet character in order to act as a stylized spacer
 /// component.
 class BulletSpacer extends StatelessWidget {
